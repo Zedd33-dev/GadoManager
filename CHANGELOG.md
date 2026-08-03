@@ -8,6 +8,68 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 1 — Database schema (2026-08-03)
+
+The complete data model as three numbered migrations. 16 domain tables, 24
+indexes, 14 schema-integrity tests.
+
+### Added
+
+- **`migrations/001_initial_schema.sql`** — every table: `users`, `farms`,
+  `user_farms`, `pastures`, `lots`, `animals`, `weighings`, `health_protocols`,
+  `health_events`, `movements`, `sales`, `sale_items`, `deaths`,
+  `cost_categories`, `costs`, `reminders`.
+- **`migrations/002_indexes.sql`** — 24 indexes, each justified by a named
+  access path in a comment. No index exists that no query uses.
+- **`migrations/003_cost_categories.sql`** — the five cost categories as
+  reference data.
+- **`tests/helpers/testDb.js`** — builds an in-memory database by running the
+  real migrations, so tests exercise the shipping schema rather than a copy.
+- **`tests/integration/schema.test.js`** — 14 tests asserting the database
+  rejects invalid data without help from the application.
+
+### Decisions
+
+- **Dates carry a `GLOB` format check.** Every date column enforces
+  `[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]`, so a localized `dd/MM/yyyy`
+  string cannot be stored even by a direct SQL statement. This is the database
+  half of the fix for `BUG-03`; storing a Brazilian-format date is what makes a
+  month filter silently match nothing.
+- **Vaccines and treatments share `health_events`** with a `kind`
+  discriminator, as confirmed. One overdue query, which therefore cannot
+  diverge between the two modules.
+- **`status = 'transferido'` means the animal left the managed herd** to a third
+  party. Moves between the owner's own farms keep the animal `ativo` and are
+  recorded in `movements`.
+- **Death cause is a constrained list** (`doenca`, `acidente`, `predador`,
+  `parto`, `desconhecida`, `outra`) plus a free-text note, so mortality is
+  reportable by cause.
+- **Date-dependent rules are not CHECK constraints.** SQLite forbids
+  non-deterministic functions such as `date('now')` inside `CHECK`, so "no
+  weighing in the future" and "no vaccine before the birth date" are enforced in
+  the service layer in Phase 12. Recorded here so the omission is not mistaken
+  for an oversight.
+- **`sale_items.animal_id` is `UNIQUE`**, which is what makes "an animal already
+  sold cannot be sold again" a database guarantee rather than a UI check.
+
+### Issue register
+
+Closes `DAT-01` (ear tag unique per farm, reusable across farms), `DAT-02`
+(one weighing per animal per day), `DAT-03` (enumerations constrained),
+`DAT-05` (money as integer centavos), `DAT-06` (an animal sells once),
+`PERF-01` (indexes on foreign keys and dashboard date columns). Database half
+of `BUG-03`. `SEC-01` holds by construction — every statement is prepared with
+bound parameters.
+
+### Verified manually
+
+- `npm run migrate` applies all three; a second run reports "up to date".
+- `npm run migrate:status` lists all three as applied.
+- `npm test` — 35 passing.
+- Resulting database: 16 domain tables, 24 custom indexes, 5 cost categories.
+
+---
+
 ## Phase 0 — Foundation (2026-08-03)
 
 Project skeleton and the two utilities that later phases depend on.
