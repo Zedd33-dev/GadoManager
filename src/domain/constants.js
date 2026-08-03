@@ -57,3 +57,29 @@ export const STALE_WEIGHING_DAYS = 60;
  * would drag the herd figure down and misrepresent performance.
  */
 export const MIN_WEIGHINGS_FOR_GMD = 2;
+
+/**
+ * How many trailing months the dashboard's time-series charts cover
+ * (Evolução do peso médio, Curva de GMD, Custos por categoria).
+ *
+ * Deliberately independent of the Período KPI filter (Fase 5): a "últimos 30
+ * dias" window would leave a monthly-bucketed line chart with one or two
+ * points, which communicates nothing. A fixed trailing window is the standard
+ * choice for a trend chart and is not expected to track a single-value KPI's
+ * date filter.
+ */
+export const CHART_TREND_MONTHS = 12;
+
+/**
+ * Age thresholds, in whole months, used to classify an animal into the herd
+ * composition chart's five categories: bezerro (<12m), novilha/boi (12-36m,
+ * by sex), vaca/touro (>36m, by sex).
+ *
+ * This classification uses age only. A real herd's category also depends on
+ * reproductive status - whether a female has calved, whether a male is used
+ * for breeding - which this schema does not track. The approximation is
+ * stated here rather than hidden, so it can be defended as a scoping decision
+ * rather than mistaken for an oversight.
+ */
+export const CALF_MAX_AGE_MONTHS = 12;
+export const YOUNG_MAX_AGE_MONTHS = 36;
