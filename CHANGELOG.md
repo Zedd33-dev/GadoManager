@@ -8,6 +8,66 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 4 — KPI services (2026-08-03)
+
+The dashboard's arithmetic, with a proof for each figure. This is the phase that
+turns the two reported defects into tested code.
+
+### Added
+
+- **`src/domain/constants.js`** — every domain magic number named with its unit
+  and justification: `ANIMAL_UNIT_KG = 450`, `ARROBA_KG = 15`,
+  `STALE_WEIGHING_DAYS = 60`, `UPCOMING_WINDOW_DAYS = 30`.
+- **`src/repositories/dashboardRepository.js`** — one function per KPI, each a
+  single inspectable statement.
+- **`src/services/kpiService.js`** — assembles the view model.
+- **`src/middleware/tenant.js`** — added `namedInClause`.
+- **`docs/business-rules.md`** — every formula with units, reasoning and proof.
+- **22 KPI tests**, all hand-verifiable from a small hostile fixture.
+
+### Decisions
+
+- **The GMD exclusion is enforced by the join**, not by application logic. An
+  animal with one weighing has no row at `rn = 2`, so the inner join drops it
+  from numerator and denominator both. There is no code path that could
+  accidentally count it as zero.
+- **Overdue counts report doses *and* distinct animals.** One animal
+  legitimately carries several overdue doses, so a bare "72" invites the reader
+  to assume 72 animals — the confusion behind the original report. The interface
+  can now say "72 doses atrasadas em 41 animais".
+- **`entryCount` accompanies every sum.** It is the only thing that
+  distinguishes "nothing recorded" from "records summing to zero", and therefore
+  the only thing that stops the cost card rendering `R$ 0,00` when the honest
+  answer is `—`.
+- **Negative GMD is displayed, not clamped.** Dry-season weight loss is real, and
+  hiding it would suppress exactly the animals a manager needs to see.
+- **Named parameters where a query repeats a value.** SQLite will not mix named
+  and anonymous placeholders in one statement, so the alert query — which
+  repeats `:today` five times — binds its tenant scope by name via
+  `namedInClause`.
+
+### Issue register
+
+Closes `BUG-01` (status filter mandatory), `BUG-02` (`applied_date IS NULL`
+mandatory), `BUG-04` (single many-to-one join, fan-out structurally impossible),
+`BUG-05` (single-weighing animals excluded), `BUG-06` (latest weighing per
+animal, not all weighings), `BUG-07` (null rather than zero), `PERF-03` (seven
+aggregates rather than per-animal queries). Application half of `BUG-03`.
+
+### Verified manually
+
+- `npm test` — 108 passing.
+- Against the seeded herd, the figures cross-check: 100 + 30 = 130 animals;
+  costs partition exactly (R$ 24.291,24 + R$ 35.875,64 = R$ 60.166,88);
+  109 weighed + 3 never weighed = 112 active; and 109 − 101 = 8 animals with
+  exactly one weighing, correctly excluded from GMD.
+- Santa Clara's finishing herd reports 0,614 kg/dia against Boa Vista's pasture
+  herd at 0,267 kg/dia — the model behaving as intended.
+- Overdue counts read zero because the sanitary calendar is not seeded yet,
+  which is correct rather than broken.
+
+---
+
 ## Phase 3 — Demo dataset (2026-08-03)
 
 A herd that tells a coherent story: a breeding and rearing operation
