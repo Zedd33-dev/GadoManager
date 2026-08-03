@@ -88,3 +88,29 @@ export function inClause(ids) {
     params: ids,
   };
 }
+
+/**
+ * The same as `inClause`, but producing named parameters.
+ *
+ * SQLite will not mix named (`:name`) and anonymous (`?`) parameters in one
+ * statement. Queries that need named parameters for readability - the alert
+ * query repeats `:today` five times - must therefore bind their scope by name
+ * too.
+ *
+ * As with `inClause`, the placeholder names are derived from the array's index,
+ * never from its contents, and the values are always bound.
+ *
+ * @param {number[]} ids
+ * @param {string} [prefix]
+ * @returns {{placeholders: string, params: Record<string, number>}}
+ */
+export function namedInClause(ids, prefix = 'scope') {
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return { placeholders: 'NULL', params: {} };
+  }
+
+  return {
+    placeholders: ids.map((_, index) => `:${prefix}${index}`).join(', '),
+    params: Object.fromEntries(ids.map((id, index) => [`${prefix}${index}`, id])),
+  };
+}
