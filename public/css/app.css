@@ -185,9 +185,106 @@ summary:focus-visible {
   padding: 0;
 }
 
-.migration-list li {
+.migration-list li,
+.capability-list li {
   display: flex;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+}
+
+.capability-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* --- Page header and user box ------------------------------------------- */
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+/* --- Forms --------------------------------------------------------------- */
+
+.field {
+  margin-bottom: var(--space-4);
+}
+
+.field label {
+  display: block;
+  margin-bottom: var(--space-1);
+  font-weight: 600;
+}
+
+.field input {
+  width: 100%;
+  /* 44px minimum touch target: this is used outdoors, on a phone, with gloves. */
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.button--primary {
+  width: 100%;
+  color: #ffffff;
+  background: var(--color-success);
+  border-color: var(--color-success);
+  font-weight: 600;
+}
+
+/* --- Alerts -------------------------------------------------------------- */
+
+.alert {
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+}
+
+.alert--danger {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
+/* --- Login --------------------------------------------------------------- */
+
+.auth-card {
+  max-width: 26rem;
+  margin: var(--space-12) auto;
+  padding: var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
 }

@@ -13,12 +13,17 @@
     "migrate": "node src/db/migrate.js",
     "migrate:status": "node src/db/migrate.js --status",
     "seed": "node seeds/demo.js",
+    "user:create": "node scripts/create-user.js",
     "test": "node --test tests/**/*.test.js"
   },
   "dependencies": {
+    "@node-rs/argon2": "^2.0.2",
     "better-sqlite3": "^13.0.2",
+    "better-sqlite3-session-store": "^0.1.0",
     "dotenv": "^16.4.7",
     "ejs": "^3.1.10",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "express-session": "^1.19.0",
+    "helmet": "^8.3.0"
   }
 }

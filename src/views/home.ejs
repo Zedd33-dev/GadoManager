@@ -1,18 +1,79 @@
 <%- include('partials/head') %>
 
-<h1>GadoManager</h1>
-<p class="lead">
-  Sistema de gestão de rebanho bovino de corte. Estrutura inicial (Fase 0) —
-  o painel completo será construído nas próximas fases.
-</p>
+<header class="page-header">
+  <div>
+    <h1>GadoManager</h1>
+    <p class="lead">Estrutura inicial — o painel completo chega na Fase 5.</p>
+  </div>
+
+  <div class="user-box">
+    <span><strong><%= currentUser.name %></strong> — <%= roleLabel %></span>
+    <form method="post" action="/logout">
+      <%- include('partials/csrfField') %>
+      <button type="submit" class="button">Sair</button>
+    </form>
+  </div>
+</header>
+
+<section aria-labelledby="titulo-rebanho">
+  <h2 id="titulo-rebanho">Rebanho no seu escopo</h2>
+  <p class="hint">
+    Somente animais das fazendas às quais sua conta tem acesso são contabilizados.
+  </p>
+
+  <table class="table">
+    <caption class="visually-hidden">Contagem de animais visíveis para a conta atual</caption>
+    <thead>
+      <tr><th scope="col">Indicador</th><th scope="col">Valor</th></tr>
+    </thead>
+    <tbody>
+      <tr><th scope="row">Fazendas acessíveis</th><td><%= scope.farmIds.length %></td></tr>
+      <tr><th scope="row">Animais (total)</th><td><%= fmt.formatNumber(animalCount) %></td></tr>
+      <tr><th scope="row">Ativos</th><td><%= fmt.formatNumber(activeCount) %></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section aria-labelledby="titulo-permissoes">
+  <h2 id="titulo-permissoes">Suas permissões</h2>
+  <p class="hint">
+    Verificadas no servidor antes de cada ação — ocultar um botão não é controle
+    de acesso.
+  </p>
+
+  <ul class="capability-list">
+    <li>
+      Registrar pesagens:
+      <span class="badge badge--<%= userCan('weighings:write') ? 'success' : 'danger' %>">
+        <%= userCan('weighings:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Cadastrar animais:
+      <span class="badge badge--<%= userCan('animals:write') ? 'success' : 'danger' %>">
+        <%= userCan('animals:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Registrar vendas:
+      <span class="badge badge--<%= userCan('sales:write') ? 'success' : 'danger' %>">
+        <%= userCan('sales:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Gerenciar fazendas:
+      <span class="badge badge--<%= userCan('farms:write') ? 'success' : 'danger' %>">
+        <%= userCan('farms:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+  </ul>
+</section>
 
 <section aria-labelledby="titulo-migracoes">
   <h2 id="titulo-migracoes">Migrações do banco de dados</h2>
 
   <% if (migrations.length === 0) { %>
-    <p class="empty-state">
-      Nenhuma migração encontrada. O esquema do banco será criado na Fase 1.
-    </p>
+    <p class="empty-state">Nenhuma migração encontrada.</p>
   <% } else { %>
     <ul class="migration-list">
       <% migrations.forEach(function (migration) { %>
@@ -25,29 +86,6 @@
       <% }); %>
     </ul>
   <% } %>
-</section>
-
-<section aria-labelledby="titulo-formatacao">
-  <h2 id="titulo-formatacao">Verificação de formatação pt-BR</h2>
-  <p class="hint">
-    Confirma que a camada de formatação central está ativa e que valores
-    ausentes aparecem como travessão, nunca como zero.
-  </p>
-
-  <table class="table">
-    <caption class="visually-hidden">Exemplos de formatação em português do Brasil</caption>
-    <thead>
-      <tr><th scope="col">Tipo</th><th scope="col">Valor</th></tr>
-    </thead>
-    <tbody>
-      <tr><th scope="row">Data</th><td><%= fmt.formatDate('2026-03-15') %></td></tr>
-      <tr><th scope="row">Moeda</th><td><%= fmt.formatCurrency(123456) %></td></tr>
-      <tr><th scope="row">Peso</th><td><%= fmt.formatWeight(1234.5) %></td></tr>
-      <tr><th scope="row">GMD</th><td><%= fmt.formatGmd(0.85) %></td></tr>
-      <tr><th scope="row">Lotação</th><td><%= fmt.formatStockingRate(1.25) %></td></tr>
-      <tr><th scope="row">Sem dados</th><td><%= fmt.formatWeight(null) %></td></tr>
-    </tbody>
-  </table>
 </section>
 
 <%- include('partials/foot') %>

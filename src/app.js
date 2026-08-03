@@ -4,14 +4,28 @@
  * Builds and returns the app without starting a server, so tests can mount it
  * directly. Starting the listener is `src/server.js`'s job.
  *
- * Middleware order matters and is documented in `docs/architecture.md`.
+ * Middleware order is deliberate and is the request lifecycle documented in
+ * `docs/architecture.md`:
+ *
+ *   security headers -> body parsing -> static assets -> session -> load user
+ *   -> CSRF token -> CSRF verification -> tenant scope -> routes -> errors
+ *
+ * Each stage depends on the one before it: CSRF verification needs both a
+ * parsed body and a session, and the tenant scope needs a loaded user.
  */
 
 import path from 'node:path';
 import express from 'express';
+import helmet from 'helmet';
 import { ROOT_DIR, isProduction } from './config/env.js';
 import { notFoundHandler, errorHandler } from './middleware/errors.js';
+import { createSessionMiddleware } from './middleware/session.js';
+import { csrfToken, verifyCsrf } from './middleware/csrf.js';
+import { loadUser, requireLogin } from './middleware/auth.js';
+import { resolveTenantScope, requireFarmAccess } from './middleware/tenant.js';
 import * as format from './lib/format.js';
+import authRoutes from './routes/auth.js';
+import healthRoutes from './routes/health.js';
 import homeRoutes from './routes/home.js';
 
 export function createApp() {
@@ -27,18 +41,55 @@ export function createApp() {
   // Do not advertise the framework.
   app.disable('x-powered-by');
 
+  // Security headers. The content security policy is restricted to same-origin
+  // assets, which the application can satisfy because nothing is loaded from a
+  // CDN - including Chart.js, which is vendored into public/.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:'],
+          fontSrc: ["'self'"],
+          connectSrc: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+        },
+      },
+      // Only meaningful over HTTPS, and would be counterproductive locally.
+      hsts: isProduction,
+    }),
+  );
+
   // Form submissions. `extended: false` keeps parsing to plain key/value pairs,
-  // which is all this application posts.
+  // which is all this application posts. The size limit bounds what an
+  // unauthenticated caller can make the server parse.
   app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
-  // Static assets, including the locally vendored Chart.js. Nothing is loaded
-  // from a CDN: the application has to work on a weak rural connection.
+  // Static assets. Mounted before the session so that serving a stylesheet does
+  // not touch the session store.
   app.use(
     '/static',
     express.static(path.join(ROOT_DIR, 'public'), {
       maxAge: isProduction ? '7d' : 0,
     }),
   );
+
+  // Session, then the user it identifies.
+  app.use(createSessionMiddleware());
+  app.use(loadUser);
+
+  // CSRF: issue a token for every session, then verify it on anything that
+  // changes state. Registered globally so a new route cannot forget it.
+  app.use(csrfToken);
+  app.use(verifyCsrf);
+
+  // Which farms the caller may address. Populates req.scope.
+  app.use(resolveTenantScope);
 
   // The pt-BR formatting helpers are exposed to every template so that views
   // never build their own date or currency strings.
@@ -48,7 +99,13 @@ export function createApp() {
     next();
   });
 
-  // Routes
+  // Public routes.
+  app.use('/', healthRoutes);
+  app.use('/', authRoutes);
+
+  // Everything past this point requires a session.
+  app.use(requireLogin);
+  app.use(requireFarmAccess);
   app.use('/', homeRoutes);
 
   // Error handling, always last.
