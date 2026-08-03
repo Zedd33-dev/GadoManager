@@ -12,6 +12,7 @@ data/*.db-wal
 uploads/
 
 # Editor and OS noise
+.claude/settings.local.json
 .vscode/
 .idea/
 Thumbs.db
