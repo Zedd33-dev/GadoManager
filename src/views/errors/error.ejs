@@ -1,0 +1,15 @@
+<%- include('../partials/head') %>
+
+<h1><%= status %></h1>
+<p class="lead"><%= message %></p>
+
+<% if (stack) { %>
+  <details>
+    <summary>Detalhes técnicos (apenas em desenvolvimento)</summary>
+    <pre><%= stack %></pre>
+  </details>
+<% } %>
+
+<p><a href="/">Voltar ao início</a></p>
+
+<%- include('../partials/foot') %>
