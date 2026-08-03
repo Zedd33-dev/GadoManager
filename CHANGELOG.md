@@ -8,6 +8,87 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 6 — Dashboard charts (2026-08-03)
+
+The six charts specified in the brief, each paired with an accessible data
+table built from the exact same numbers.
+
+### Added
+
+- **`chart.js` (^4.5.1)** as a real npm dependency, served same-origin from
+  `node_modules/chart.js/dist` via a dedicated static route - not copied into
+  `public/vendor/`, not loaded from a CDN.
+- **`src/lib/safeJson.js`** — escapes chart data for safe embedding inside a
+  `<script type="application/json">` tag.
+- **New dashboard repository queries**: `weightByLot`, `activeAnimalDemographics`,
+  `monthlyWeightByLot`, `monthlyGmdByLot`, `monthlyCostByCategory`.
+- **`src/services/chartDataService.js`** — assembles each chart's
+  labels/series *and* its table rows from one query pass, so the visual and
+  the accessible fallback can never disagree.
+- **`public/js/charts.js`** — vanilla script (no bundler) that reads the
+  embedded JSON and renders: a status donut with a centre total and a
+  percentage legend; a "Peso médio por lote" bar chart with value labels and a
+  herd-average reference line; a grouped bar for herd composition by age range
+  and sex; two line charts (weight evolution, GMD curve) over a trailing
+  12-month window, one series per lote; and a stacked bar for costs by
+  category.
+- **`docs/business-rules.md`** — age-range classification documented as a
+  stated approximation.
+- **13 new tests** for the chart-data layer, plus a 17-check and then a
+  browser-driven runtime pass against the seeded data.
+
+### Decisions
+
+- **Chart.js is served from its own npm package, not vendored as a file in
+  `public/`.** The baseline design document said "vendored locally in
+  `public/vendor/`"; serving directly from the installed dependency achieves
+  the same goal - same-origin, no CDN, works offline - without a second copy of
+  the library to keep in sync with `package.json`. Recorded here as a
+  deliberate deviation from that document, not an oversight.
+- **Weight and GMD trend charts are not restricted to active animals.** This
+  is the opposite of the Phase 4 KPI cards, deliberately: a historical trend
+  legitimately includes weighings from an animal later sold or that died,
+  since those weighings are facts about the period being charted. Excluding
+  them would be survivorship bias - the "Peso médio (última pesagem)" KPI and
+  the "Evolução do peso médio" chart correctly answer different questions.
+- **The trend charts use a fixed trailing 12-month window**, independent of
+  the Fase 5 Período filter. A "últimos 30 dias" window would leave a
+  monthly-bucketed line chart with one or two points. The lote filter does
+  apply to every chart.
+- **Herd composition is classified by age alone.** The five categories
+  (bezerro, novilha, boi, vaca, touro) properly depend on reproductive status,
+  which this schema does not track. The approximation is stated in the UI
+  copy and in `docs/business-rules.md` rather than silently baked in.
+- **Chart data is embedded as JSON in the page, not fetched separately.** One
+  request instead of two, and it keeps the chart working the moment the page
+  finishes loading rather than after a second round trip - relevant on the
+  weak connections this project targets.
+- **Every chart has a real `<table>`, not a decorative one.** If
+  `public/js/charts.js` never runs, the table is still there with the same
+  numbers the chart would have shown - the chart is a visualisation of data
+  that already exists on the page, not the only place the data lives.
+
+### Issue register
+
+Closes `UX-01` (donut has a fixed-height wrapper, a legend with counts and
+percentages, and a centre total - no longer oversized), `UX-02` (bar chart has
+axis units, value labels, sorting, and a reference line - no longer dead
+space), `UX-10` (every chart has role="img", an aria-label, and an ARIA text
+alternative table).
+
+### Verified manually
+
+- `npm test` — 148 passing.
+- A 17-check pass against the running server with seeded data: the embedded
+  JSON's herd-status total and composition total match the KPI cards exactly
+  (130 and 112); both time-series charts span exactly 12 months; the CSP gained
+  no `unsafe-inline` or `unsafe-eval`; six accessible tables are present.
+- A browser-driven pass (login, then inspect the live page via
+  `Chart.getChart()`): all six canvases instantiated with the correct chart
+  type (doughnut / bar / line) and non-zero dimensions, with no console errors.
+
+---
+
 ## Phase 5 — Dashboard v1 (2026-08-03)
 
 Replaces the placeholder home page with a working dashboard: URL-persisted
