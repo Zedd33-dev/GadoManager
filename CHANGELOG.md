@@ -8,6 +8,93 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 3 — Demo dataset (2026-08-03)
+
+A herd that tells a coherent story: a breeding and rearing operation
+(Fazenda Boa Vista, MS) that sends its young stock to a finishing operation
+(Fazenda Santa Clara, MT), across eighteen months.
+
+### Added
+
+- **`src/lib/dates.js`** — ISO date arithmetic used by both the seed and, from
+  Phase 4, the KPI services: `addDays`, `addMonths`, `daysBetween`,
+  `startOfMonth`, `startOfNextMonth`, `ageInMonths`.
+- **`seeds/lib/random.js`** — seeded mulberry32 generator plus helpers.
+- **`seeds/lib/growth.js`** — the weight model.
+- **`seeds/demo.js`** (`npm run seed`) — the dataset itself.
+- **25 new tests** covering date arithmetic, generator reproducibility and the
+  growth model.
+
+### The dataset
+
+| | |
+| --- | ---: |
+| Fazendas / lotes / pastos | 2 / 6 / 4 |
+| Animais | 130 (112 ativos, 12 vendidos, 4 mortos, 2 transferidos) |
+| Pesagens | ~720 over 18 months |
+| Movimentações | ~420 |
+| Vendas | 3 events, 12 animals |
+| Custos | ~120 entries across 18 months |
+| Lembretes | 5 |
+
+Demo accounts, password `Gado@2026`:
+
+| E-mail | Papel | Fazendas |
+| --- | --- | --- |
+| `admin@gadomanager.com.br` | admin | ambas |
+| `gerente@boavista.com.br` | gerente | Boa Vista |
+| `gerente@santaclara.com.br` | gerente | Santa Clara |
+| `peao@boavista.com.br` | peão | Boa Vista |
+
+### Decisions
+
+- **The seed is deterministic.** A fixed seed means `npm run seed` produces the
+  same herd every time. A dataset that changed between runs would make thesis
+  screenshots disagree with the running system, and would make a defect found
+  during the defense impossible to reproduce.
+- **The dataset is shaped to exercise the rules the dashboard must get right.**
+  Three active animals have no weighing at all and five have exactly one, so the
+  GMD average has a real population it must *exclude* rather than count as zero,
+  and the "sem pesagem" card is not empty. Sold and dead animals stop being
+  weighed on their exit date, so any query that forgets to filter by status
+  produces visibly wrong numbers instead of plausible ones.
+- **Growth is modelled, not randomised.** Life phase, seasonal forage quality and
+  a fixed per-animal factor. The dry season (May–September) depresses gain, and
+  the lightest animals on pasture genuinely lose weight — which is what gives
+  the GMD curve a shape worth charting and gives Phase 9's outlier detection
+  something real to find. Observed seasonal spread: ~0,51 kg/dia in January
+  against ~0,25 kg/dia in July.
+- **Cattle are sold heaviest-first.** Selecting at random produced 380 kg
+  animals at the abattoir, which no buyer would accept. Sorting by simulated
+  weight on the sale date moved the sales to 474–557 kg and 17–20 @, which is
+  the real commercial window.
+- **Sale weights carry measurement noise**, like any scale reading. Without it,
+  animals that had converged on the same growth asymptote all shipped at an
+  identical weight.
+
+### Deliberately not seeded
+
+**Vaccines and treatments.** The sanitary calendar is pending confirmation of
+the protocol list and the farms' states. Brazil's recognition as free of
+foot-and-mouth disease without vaccination in 2025 makes a routine *febre
+aftosa* calendar anachronistic for a 2026 dataset, and a vaccination schedule
+invented for a thesis would be indefensible. `health_protocols` and
+`health_events` are created and empty.
+
+### Verified manually
+
+- `npm test` — 86 passing.
+- `npm run seed` — reproducible, no integrity flags: no weighing is negative,
+  in the future, before the animal's birth, or after it left the herd.
+- Average weight ranks correctly by lot: Engorda > Matrizes > Recria Machos >
+  Recria Fêmeas > Bezerros.
+- Logged into all four demo accounts against the running application: admin
+  sees 130 animals, the Boa Vista manager 100, the Santa Clara manager 30 — an
+  exact partition with no overlap — and the peão sees the same herd as the
+  manager but `Registrar vendas` reads *negado*.
+
+---
+
 ## Phase 2 — Authentication, roles and tenant isolation (2026-08-03)
 
 Login, the three-role permission model, CSRF protection, security headers, and
