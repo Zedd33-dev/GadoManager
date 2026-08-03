@@ -454,3 +454,152 @@ test('an empty scope produces zeros and nulls, never the whole database', () => 
 
   db.close();
 });
+
+// ---------------------------------------------------------------------------
+// Lote filter
+// ---------------------------------------------------------------------------
+
+function insertLot(db, farmId, name) {
+  return db
+    .prepare(`INSERT INTO lots (farm_id, name, active, created_at, updated_at) VALUES (?, ?, 1, ?, ?)`)
+    .run(farmId, name, NOW, NOW).lastInsertRowid;
+}
+
+/**
+ * A second fixture with two lots, so the lote filter can be shown to narrow
+ * every KPI rather than merely accepting a parameter it ignores.
+ *
+ *   Lote 1: A (400->460kg, 61d) and C (500kg, one weighing)
+ *   Lote 2: B (300->330kg, 30d)
+ */
+function buildLotFixture() {
+  const db = createTestDb();
+  const farmId = insertFarm(db);
+  const lot1 = insertLot(db, farmId, 'Lote 1');
+  const lot2 = insertLot(db, farmId, 'Lote 2');
+
+  const a = insertAnimal(db, farmId, { ear_tag: 'A', lot_id: lot1 });
+  const b = insertAnimal(db, farmId, { ear_tag: 'B', lot_id: lot2 });
+  const c = insertAnimal(db, farmId, { ear_tag: 'C', lot_id: lot1 });
+
+  insertWeighing(db, a, '2026-06-03', 400);
+  insertWeighing(db, a, '2026-08-03', 460);
+  insertWeighing(db, b, '2026-07-04', 300);
+  insertWeighing(db, b, '2026-08-03', 330);
+  insertWeighing(db, c, '2026-08-03', 500);
+
+  return { db, farmId, lot1, lot2, a, b, c };
+}
+
+test('a lote filter narrows the weight and GMD averages to that lote', () => {
+  const { db, farmId, lot1, lot2 } = buildLotFixture();
+
+  // Lote 1: A (460) and C (500) -> average 480.
+  const lot1Weight = latestWeightAverage(db, [farmId], { lotId: lot1 });
+  assert.equal(lot1Weight.animalCount, 2);
+  assert.equal(lot1Weight.averageKg, 480);
+
+  // Lote 2: only B (330).
+  const lot2Weight = latestWeightAverage(db, [farmId], { lotId: lot2 });
+  assert.equal(lot2Weight.animalCount, 1);
+  assert.equal(lot2Weight.averageKg, 330);
+
+  // Lote 1 has only one animal (A) with two weighings; C is excluded as usual.
+  const lot1Gain = averageDailyGain(db, [farmId], { lotId: lot1 });
+  assert.equal(lot1Gain.animalCount, 1);
+  assert.ok(Math.abs(lot1Gain.averageKgPerDay - 60 / 61) < 1e-9);
+
+  db.close();
+});
+
+test('a lote filter with no matching animals produces null, not an error', () => {
+  const { db, farmId } = buildLotFixture();
+  const emptyLot = insertLot(db, farmId, 'Lote Vazio');
+
+  const weight = latestWeightAverage(db, [farmId], { lotId: emptyLot });
+
+  assert.equal(weight.animalCount, 0);
+  assert.equal(weight.averageKg, null);
+
+  db.close();
+});
+
+test('costTotalInRange with a lote filter excludes farm-wide costs', () => {
+  const { db, farmId, lot1 } = buildLotFixture();
+
+  insertCost(db, farmId, '2026-08-05', 100000); // farm-wide (lot_id NULL)
+
+  db.prepare(
+    `UPDATE costs SET lot_id = ? WHERE farm_id = ? AND cost_date = '2026-08-05'`,
+  ).run(null, farmId); // explicit: farm-wide
+
+  const lotCost = db
+    .prepare(
+      `INSERT INTO costs (farm_id, lot_id, category_id, cost_date, amount_cents, is_recurring, created_at, updated_at)
+       SELECT ?, ?, category_id, '2026-08-06', 50000, 0, ?, ? FROM costs LIMIT 1`,
+    )
+    .run(farmId, lot1, NOW, NOW);
+  assert.ok(lotCost.changes >= 1);
+
+  const scopedToLot = costTotalInRange(db, [farmId], '2026-08-01', '2026-09-01', { lotId: lot1 });
+
+  // Only the lot-specific 50000 counts; the 100000 farm-wide cost is excluded.
+  assert.equal(scopedToLot.totalCents, 50000);
+  assert.equal(scopedToLot.entryCount, 1);
+
+  db.close();
+});
+
+test('the service applies the lote filter end to end', () => {
+  const { db, farmId, lot1, lot2 } = buildLotFixture();
+
+  const kpisAll = buildDashboardKpis(db, [farmId], { today: TODAY });
+  assert.equal(kpisAll.averageWeight.animalCount, 3);
+
+  const kpisLot1 = buildDashboardKpis(db, [farmId], { today: TODAY, lotId: lot1 });
+  assert.equal(kpisLot1.averageWeight.animalCount, 2);
+  assert.equal(kpisLot1.averageWeight.value, 480);
+
+  const kpisLot2 = buildDashboardKpis(db, [farmId], { today: TODAY, lotId: lot2 });
+  assert.equal(kpisLot2.averageWeight.animalCount, 1);
+  assert.equal(kpisLot2.averageWeight.value, 330);
+
+  db.close();
+});
+
+// ---------------------------------------------------------------------------
+// Period filter (custos)
+// ---------------------------------------------------------------------------
+
+test('the service defaults the cost period to the current month, unchanged from Phase 4', () => {
+  const { db, farmId } = buildFixture();
+  insertCost(db, farmId, '2026-08-02', 70000);
+  insertCost(db, farmId, '2026-07-15', 999999); // previous month, must be excluded by default
+
+  const kpis = buildDashboardKpis(db, [farmId], { today: TODAY });
+
+  assert.equal(kpis.monthlyCost.value, 70000);
+  assert.equal(kpis.monthlyCost.periodLabel, 'Custos do mês');
+
+  db.close();
+});
+
+test('a period preset changes which costs the service sums', () => {
+  const { db, farmId } = buildFixture();
+  insertCost(db, farmId, '2026-08-02', 70000); // this month, within 30 days of TODAY
+  insertCost(db, farmId, '2026-06-15', 30000); // ~7 weeks back - inside 90 days, outside 30
+
+  const last30 = buildDashboardKpis(db, [farmId], {
+    today: TODAY,
+    period: { preset: '30' },
+  });
+  assert.equal(last30.monthlyCost.value, 70000);
+
+  const last90 = buildDashboardKpis(db, [farmId], {
+    today: TODAY,
+    period: { preset: '90' },
+  });
+  assert.equal(last90.monthlyCost.value, 100000);
+
+  db.close();
+});
