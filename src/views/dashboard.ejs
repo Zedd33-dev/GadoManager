@@ -1,0 +1,257 @@
+<%- include('partials/head') %>
+
+<header class="page-header">
+  <div>
+    <h1>Painel</h1>
+    <p class="lead">Visão geral do rebanho no escopo selecionado.</p>
+  </div>
+
+  <div class="user-box">
+    <span><strong><%= currentUser.name %></strong> — <%= roleLabel %></span>
+    <form method="post" action="/logout">
+      <%- include('partials/csrfField') %>
+      <button type="submit" class="button">Sair</button>
+    </form>
+  </div>
+</header>
+
+<form method="get" action="/" class="filter-bar" aria-label="Filtros do painel">
+  <div class="filter-field">
+    <label for="fazenda">Fazenda</label>
+    <select id="fazenda" name="fazenda" onchange="this.form.submit()">
+      <option value="">Todas</option>
+      <% filters.farms.forEach(function (farm) { %>
+        <option value="<%= farm.id %>" <%= filters.farmId === farm.id ? 'selected' : '' %>>
+          <%= farm.name %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="lote">Lote</label>
+    <select id="lote" name="lote" onchange="this.form.submit()">
+      <option value="">Todos</option>
+      <% filters.lots.forEach(function (lot) { %>
+        <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
+          <%= lot.name %> — <%= lot.farm_name %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="status">Status do animal</label>
+    <select id="status" name="status" onchange="this.form.submit()">
+      <% statusOptions.forEach(function (value) { %>
+        <option value="<%= value %>" <%= filters.status === value ? 'selected' : '' %>>
+          <%= statusLabels[value] %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="periodo">Período (custos)</label>
+    <select id="periodo" name="periodo" onchange="this.form.submit()">
+      <option value="mes" <%= filters.period.preset === 'mes' ? 'selected' : '' %>>Mês atual</option>
+      <option value="30" <%= filters.period.preset === '30' ? 'selected' : '' %>>Últimos 30 dias</option>
+      <option value="90" <%= filters.period.preset === '90' ? 'selected' : '' %>>Últimos 90 dias</option>
+      <option value="180" <%= filters.period.preset === '180' ? 'selected' : '' %>>Últimos 180 dias</option>
+      <option value="ano" <%= filters.period.preset === 'ano' ? 'selected' : '' %>>Este ano</option>
+      <option value="custom" <%= filters.period.preset === 'custom' ? 'selected' : '' %>>Personalizado</option>
+    </select>
+  </div>
+
+  <% if (filters.period.preset === 'custom') { %>
+    <div class="filter-field">
+      <label for="de">De</label>
+      <input type="date" id="de" name="de" value="<%= filters.period.customFrom %>">
+    </div>
+    <div class="filter-field">
+      <label for="ate">Até</label>
+      <input type="date" id="ate" name="ate" value="<%= filters.period.customUntil %>">
+    </div>
+  <% } %>
+
+  <button type="submit" class="button button--primary filter-submit">Filtrar</button>
+</form>
+
+<section aria-labelledby="titulo-kpis">
+  <h2 id="titulo-kpis" class="visually-hidden">Indicadores</h2>
+
+  <% if (kpis.herd.total === 0) { %>
+    <p class="empty-state">Nenhum animal cadastrado neste escopo.</p>
+  <% } else { %>
+    <div class="kpi-grid">
+
+      <article class="kpi-card">
+        <h3>Animais (total)</h3>
+        <p class="kpi-value"><%= fmt.formatNumber(kpis.herd.total) %></p>
+      </article>
+
+      <article class="kpi-card">
+        <h3>Rebanho por status</h3>
+        <p class="kpi-value">
+          <%= fmt.formatNumber(herdCountByStatus[filters.status]) %>
+          <span class="kpi-unit"><%= statusLabels[filters.status] %></span>
+        </p>
+        <ul class="status-chips">
+          <% statusOptions.forEach(function (value) { %>
+            <li>
+              <a
+                class="chip <%= filters.status === value ? 'chip--active' : '' %>"
+                href="/?<%= buildFilterQuery({ status: value }) %>"
+              >
+                <%= statusLabels[value] %> (<%= fmt.formatNumber(herdCountByStatus[value]) %>)
+              </a>
+            </li>
+          <% }); %>
+        </ul>
+      </article>
+
+      <article class="kpi-card" title="<%= kpis.averageWeight.explanation %>">
+        <h3>Peso médio (última pesagem)</h3>
+        <% if (kpis.averageWeight.value === null) { %>
+          <p class="kpi-value">—</p>
+          <p class="kpi-empty"><%= kpis.averageWeight.emptyMessage %></p>
+        <% } else { %>
+          <p class="kpi-value"><%= fmt.formatWeight(kpis.averageWeight.value) %></p>
+          <p class="kpi-meta">n = <%= kpis.averageWeight.animalCount %></p>
+        <% } %>
+      </article>
+
+      <article class="kpi-card" title="<%= kpis.averageDailyGain.explanation %>">
+        <h3>GMD médio</h3>
+        <% if (kpis.averageDailyGain.value === null) { %>
+          <p class="kpi-value">—</p>
+          <p class="kpi-empty"><%= kpis.averageDailyGain.emptyMessage %></p>
+        <% } else { %>
+          <p class="kpi-value"><%= fmt.formatGmd(kpis.averageDailyGain.value) %></p>
+          <p class="kpi-meta">n = <%= kpis.averageDailyGain.animalCount %></p>
+        <% } %>
+      </article>
+
+      <article class="kpi-card" title="<%= kpis.withoutRecentWeighing.explanation %>">
+        <h3>Sem pesagem (<%= kpis.withoutRecentWeighing.windowDays %> dias)</h3>
+        <% if (kpis.withoutRecentWeighing.value === 0) { %>
+          <p class="kpi-value">—</p>
+          <p class="kpi-empty">Todos os animais ativos foram pesados recentemente.</p>
+        <% } else { %>
+          <p class="kpi-value"><%= fmt.formatNumber(kpis.withoutRecentWeighing.value) %></p>
+          <p class="kpi-meta"><%= fmt.formatNumber(kpis.withoutRecentWeighing.neverWeighed) %> nunca pesado(s)</p>
+        <% } %>
+      </article>
+
+      <article class="kpi-card" title="<%= kpis.monthlyCost.explanation %>">
+        <h3><%= kpis.monthlyCost.periodLabel %></h3>
+        <% if (kpis.monthlyCost.value === null) { %>
+          <p class="kpi-value">—</p>
+          <p class="kpi-empty"><%= kpis.monthlyCost.emptyMessage %></p>
+        <% } else { %>
+          <p class="kpi-value"><%= fmt.formatCurrency(kpis.monthlyCost.value) %></p>
+          <p class="kpi-meta"><%= kpis.monthlyCost.entryCount %> lançamento(s)</p>
+        <% } %>
+      </article>
+
+      <article class="kpi-card">
+        <h3>Fazendas / Lotes</h3>
+        <p class="kpi-value"><%= kpis.structure.farms %> / <%= kpis.structure.lots %></p>
+      </article>
+
+    </div>
+  <% } %>
+</section>
+
+<section aria-labelledby="titulo-alertas">
+  <h2 id="titulo-alertas">Alertas</h2>
+
+  <% if (!kpis.healthAlerts.hasAny) { %>
+    <p class="empty-state">Nenhum alerta sanitário no momento.</p>
+  <% } else { %>
+    <ul class="alert-list">
+      <% if (kpis.healthAlerts.overdueVaccineDoses > 0) { %>
+        <li class="alert-row alert-row--danger">
+          <span class="badge badge--danger"><%= kpis.healthAlerts.overdueVaccineDoses %></span>
+          <span>
+            <%= kpis.healthAlerts.overdueVaccineDoses %> dose(s) de vacina atrasada(s)
+            em <%= kpis.healthAlerts.overdueAnimals %> animal(is)
+          </span>
+        </li>
+      <% } %>
+      <% if (kpis.healthAlerts.overdueTreatmentDoses > 0) { %>
+        <li class="alert-row alert-row--danger">
+          <span class="badge badge--danger"><%= kpis.healthAlerts.overdueTreatmentDoses %></span>
+          <span>
+            <%= kpis.healthAlerts.overdueTreatmentDoses %> tratamento(s) atrasado(s)
+            em <%= kpis.healthAlerts.overdueAnimals %> animal(is)
+          </span>
+        </li>
+      <% } %>
+      <% if (kpis.healthAlerts.dueSoonDoses > 0) { %>
+        <li class="alert-row alert-row--info">
+          <span class="badge badge--info"><%= kpis.healthAlerts.dueSoonDoses %></span>
+          <span>
+            dose(s) a vencer nos próximos <%= kpis.healthAlerts.windowDays %> dias
+            (<%= kpis.healthAlerts.dueSoonAnimals %> animal(is))
+          </span>
+        </li>
+      <% } %>
+    </ul>
+    <p class="hint">
+      A navegação direta para a lista de vacinas e tratamentos será adicionada
+      quando o módulo correspondente for implementado (Fase 10).
+    </p>
+  <% } %>
+  <p class="hint"><%= kpis.healthAlerts.explanation %></p>
+</section>
+
+<details class="diagnostics">
+  <summary>Diagnóstico do sistema</summary>
+
+  <h3>Suas permissões</h3>
+  <ul class="capability-list">
+    <li>
+      Registrar pesagens:
+      <span class="badge badge--<%= userCan('weighings:write') ? 'success' : 'danger' %>">
+        <%= userCan('weighings:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Cadastrar animais:
+      <span class="badge badge--<%= userCan('animals:write') ? 'success' : 'danger' %>">
+        <%= userCan('animals:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Registrar vendas:
+      <span class="badge badge--<%= userCan('sales:write') ? 'success' : 'danger' %>">
+        <%= userCan('sales:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+    <li>
+      Gerenciar fazendas:
+      <span class="badge badge--<%= userCan('farms:write') ? 'success' : 'danger' %>">
+        <%= userCan('farms:write') ? 'permitido' : 'negado' %>
+      </span>
+    </li>
+  </ul>
+
+  <h3>Migrações do banco de dados</h3>
+  <% if (migrations.length === 0) { %>
+    <p class="empty-state">Nenhuma migração encontrada.</p>
+  <% } else { %>
+    <ul class="migration-list">
+      <% migrations.forEach(function (migration) { %>
+        <li>
+          <span class="badge badge--<%= migration.applied ? 'success' : 'warning' %>">
+            <%= migration.applied ? 'aplicada' : 'pendente' %>
+          </span>
+          <code><%= migration.filename %></code>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</details>
+
+<%- include('partials/foot') %>

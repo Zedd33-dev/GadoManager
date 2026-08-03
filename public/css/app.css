@@ -288,3 +288,220 @@ summary:focus-visible {
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
+
+/* --- Badge: info variant ------------------------------------------------- */
+
+.badge--info {
+  color: var(--color-info);
+  background: var(--color-info-bg);
+}
+
+/* --- Filter bar ------------------------------------------------------------
+   A plain GET form: submitting reloads the page with every selection encoded
+   in the URL query string, which is how filters are "persisted in the URL"
+   without any client-side JavaScript - it also means the filters keep working
+   on a slow connection or with JavaScript disabled. */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 10rem;
+  flex: 1 1 10rem;
+}
+
+.filter-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.filter-field select,
+.filter-field input {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.filter-submit {
+  flex: 0 0 auto;
+}
+
+/* Works without JavaScript: the select onchange auto-submit is progressive
+   enhancement. Hide the button only when JS can submit the form itself is
+   NOT done here on purpose - the button always stays, so the filters remain
+   fully usable if a select's onchange handler ever fails to fire. */
+
+/* --- KPI grid -------------------------------------------------------------
+   A fixed card height is deliberately avoided: text length varies a lot in
+   pt-BR (e.g. "Nenhuma pesagem registrada..." vs "1.234,5 kg"), so cards size
+   to content and the grid reflows instead of truncating. */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+
+.kpi-card {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.kpi-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.kpi-value {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.kpi-unit {
+  font-size: var(--text-base);
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.kpi-meta,
+.kpi-empty {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* --- Status chips ----------------------------------------------------------
+   Doubles as both the herd-composition legend and the interactive control for
+   the "status" URL filter: each chip is a link that re-submits the dashboard
+   with a different status selected, highlighting the one currently active. */
+
+.status-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+}
+
+.chip--active {
+  color: #ffffff;
+  background: var(--color-info);
+  border-color: var(--color-info);
+  font-weight: 600;
+}
+
+/* --- Alerts panel ----------------------------------------------------------
+   Replaces the bare red badges from the original dashboard with rows that
+   state both the count and its population (e.g. "72 doses ... em 41
+   animais"), so the reader never has to guess whether a number counts doses
+   or animals. */
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.alert-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-left-width: 4px;
+  border-radius: var(--radius);
+}
+
+.alert-row--danger {
+  border-left-color: var(--color-danger);
+}
+
+.alert-row--info {
+  border-left-color: var(--color-info);
+}
+
+/* --- Diagnostics ------------------------------------------------------------
+   Developer-facing panel (permissions, migration status), kept out of the
+   main dashboard flow since it is not part of the herd-management UX. */
+
+.diagnostics {
+  margin-top: var(--space-8);
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.diagnostics summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.diagnostics h3 {
+  font-size: var(--text-base);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+/* --- Responsive -------------------------------------------------------------
+   Mobile-first is completed in Phase 7 (tables collapsing to cards, hamburger
+   nav); this early pass keeps the filter bar and KPI grid usable on a phone. */
+
+@media (max-width: 640px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field {
+    min-width: 0;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+}
