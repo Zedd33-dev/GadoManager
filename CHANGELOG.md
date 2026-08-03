@@ -8,6 +8,90 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 5 — Dashboard v1 (2026-08-03)
+
+Replaces the placeholder home page with a working dashboard: URL-persisted
+filters, KPI cards with tooltips and genuine empty states, and an actionable
+alerts panel.
+
+### Added
+
+- **`src/lib/period.js`** — resolves the Período preset (mês atual / 30 / 90 /
+  180 dias / este ano / personalizado) into a half-open date range.
+- **`src/repositories/farmRepository.js`**, **`lotRepository.js`** — scoped
+  lookups for the filter dropdowns.
+- **`src/services/dashboardFilters.js`** — reads and validates the `lote`,
+  `status` and `periodo` query parameters; builds filter-preserving query
+  strings for the status chips.
+- **`src/views/dashboard.ejs`** — filter bar, KPI grid, alerts panel, herd
+  empty state, and a collapsed diagnostics panel (permissions, migrations).
+- **Lot filtering added to every dashboard repository function** (§ below).
+- **34 new tests**: period presets, filter resolution and scoping, and the
+  lote filter narrowing every KPI end to end.
+- **An 18-check manual pass** against the running server with the seeded data.
+
+### Decisions
+
+- **Filters persist through a plain GET `<form>`, not JavaScript.** Submitting
+  reloads the page with every selection already encoded in the URL query
+  string — which is literally what "persisted in the URL" requires, and it
+  keeps working with a slow connection or JavaScript disabled. The `onchange`
+  auto-submit on each `<select>` is progressive enhancement; the submit button
+  is never removed, so the form still works if that fails to fire.
+- **Every dashboard query accepts an optional `{lotId}`.** The clause is
+  `(? IS NULL OR a.lot_id = ?)`, always present, a no-op when `lotId` is
+  `null`. The filtered and unfiltered case are one statement, not two — so
+  there is no second code path that could drift out of sync with the first.
+- **A lote's cost figure excludes farm-wide overhead.** When a lote is
+  selected, only costs allocated directly to it (`costs.lot_id = lotId`) are
+  summed; a farm-wide cost (`lot_id IS NULL`) is not silently absorbed into a
+  single lote's number.
+- **Weight and GMD do not have a period dimension**, because they measure the
+  herd *now*, not a sum over a range — there is nothing for the period filter
+  to narrow there. Only the cost card changes with it. This is inherent to what
+  those two KPIs are, not an implementation gap.
+- **The status filter is a display slice, not an override of the business
+  rules.** Weight, GMD and the alert counts always use `status = 'ativo'`
+  regardless of the selected status, per the formulas proven in Phase 4. The
+  filter instead drives the herd-composition legend, which doubles as its own
+  control: clicking a status chip re-submits the dashboard with that status
+  selected. Selecting "Vendido" narrows the herd count shown, but does not
+  change the weight or GMD cards — this is called out in the UI copy so it does
+  not read as a bug.
+- **Out-of-scope or malformed filter values are dropped, not rejected.** A bad
+  `?lote=` or `?status=` degrades to "no filter" rather than a 403 or 500 —
+  unlike `?fazenda=`, which remains a hard tenant-security boundary enforced in
+  `middleware/tenant.js` and unchanged by this phase.
+- **KPI cards and the alerts panel are not yet linked to filtered list
+  screens**, because those screens (Animais, Vacinas/Tratamentos) do not exist
+  until Phases 8 and 10. Faking the links would ship dead ends; building
+  throwaway stub pages would duplicate work Phase 8 does properly. The status
+  chips are real and interactive today because they operate on the dashboard
+  itself, which does exist. The alerts panel says as much in its own copy.
+- **No skeleton loading state.** Skeleton loaders cover the gap while a client
+  fetches data asynchronously; this page is rendered fully on the server before
+  it reaches the browser, so there is no loading gap to skeleton over. Adding
+  one would be decoration with no function.
+
+### Issue register
+
+Closes `UX-03` (alerts state counts and populations, not bare badges), `UX-04`
+(status chips are clickable and reflect the current filter), `UX-05` (global
+filters, persisted in the URL, respected by every KPI), `UX-06` (herd and cost
+empty states with explanatory copy).
+
+### Verified manually
+
+- `npm test` — 135 passing.
+- Against the running server with the seeded data: total 130 animals;
+  `?fazenda=<Santa Clara>` narrows to 30 animals / 18 active; `?periodo=90`
+  relabels the cost card to "Custos (últimos 90 dias)"; `?status=vendido`
+  highlights 12; `?lote=99999&status=xyz&periodo=whatever` returns 200 and
+  falls back to the defaults rather than erroring; the Santa Clara manager's
+  farm select shows only their own farm. 18/18 checks passed.
+
+---
+
 ## Phase 4 — KPI services (2026-08-03)
 
 The dashboard's arithmetic, with a proof for each figure. This is the phase that
