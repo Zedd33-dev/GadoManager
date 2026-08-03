@@ -24,12 +24,8 @@ import {
   costTotalInRange,
   structureCounts,
 } from '../repositories/dashboardRepository.js';
-import {
-  todayIso,
-  addDays,
-  startOfMonth,
-  startOfNextMonth,
-} from '../lib/dates.js';
+import { todayIso, addDays } from '../lib/dates.js';
+import { resolvePeriod } from '../lib/period.js';
 import {
   UPCOMING_WINDOW_DAYS,
   STALE_WEIGHING_DAYS,
@@ -41,27 +37,34 @@ import {
  *
  * @param {import('better-sqlite3').Database} db
  * @param {number[]} farmIds the caller's tenant scope
- * @param {{today?: string}} [options] `today` is injectable so tests are not
- *   tied to the machine clock
+ * @param {{today?: string, lotId?: number|null, period?: {preset?: string, customFrom?: string, customUntil?: string}}} [options]
+ *   `today` is injectable so tests are not tied to the machine clock. `lotId`
+ *   narrows every KPI to one lote; `period` selects the range summed by the
+ *   cost KPI and defaults to the current month, matching the figures every
+ *   Phase 4 test was written against.
+ *
+ *   Weight and GMD are point-in-time "latest measurement" figures, not sums
+ *   over a range, so `period` has nothing to narrow there - that is inherent
+ *   to what those two KPIs measure, not an omission.
  */
 export function buildDashboardKpis(db, farmIds, options = {}) {
   const today = options.today ?? todayIso();
+  const lotId = options.lotId ?? null;
+  const period = resolvePeriod(options.period ?? {}, today);
 
   const horizon = addDays(today, UPCOMING_WINDOW_DAYS);
   const staleCutoff = addDays(today, -STALE_WEIGHING_DAYS);
-  const monthStart = startOfMonth(today);
-  const monthEnd = startOfNextMonth(today);
 
-  const statusCounts = countAnimalsByStatus(db, farmIds);
-  const weight = latestWeightAverage(db, farmIds);
-  const gain = averageDailyGain(db, farmIds);
-  const alerts = healthAlertCounts(db, farmIds, today, horizon);
-  const stale = animalsWithoutRecentWeighing(db, farmIds, staleCutoff);
-  const cost = costTotalInRange(db, farmIds, monthStart, monthEnd);
+  const statusCounts = countAnimalsByStatus(db, farmIds, { lotId });
+  const weight = latestWeightAverage(db, farmIds, { lotId });
+  const gain = averageDailyGain(db, farmIds, { lotId });
+  const alerts = healthAlertCounts(db, farmIds, today, horizon, { lotId });
+  const stale = animalsWithoutRecentWeighing(db, farmIds, staleCutoff, { lotId });
+  const cost = costTotalInRange(db, farmIds, period.from, period.until, { lotId });
   const structure = structureCounts(db, farmIds);
 
   return {
-    reference: { today, horizon, staleCutoff, monthStart, monthEnd },
+    reference: { today, horizon, staleCutoff, lotId, period },
 
     herd: {
       total: statusCounts.total,
@@ -124,7 +127,7 @@ export function buildDashboardKpis(db, farmIds, options = {}) {
 
     monthlyCost: {
       /**
-       * Centavos, or null when nothing was recorded this month.
+       * Centavos, or null when nothing was recorded in the selected period.
        *
        * The distinction matters: `entryCount === 0` means no data and renders as
        * an em dash with a call to action, while entries that genuinely sum to
@@ -132,9 +135,15 @@ export function buildDashboardKpis(db, farmIds, options = {}) {
        */
       value: cost.entryCount > 0 ? cost.totalCents : null,
       entryCount: cost.entryCount,
-      emptyMessage: cost.entryCount === 0 ? 'Nenhum custo lançado neste mês.' : null,
-      periodStart: monthStart,
-      explanation: 'Soma dos custos lançados no mês corrente, dentro do escopo selecionado.',
+      emptyMessage: cost.entryCount === 0 ? 'Nenhum custo lançado no período selecionado.' : null,
+      periodStart: period.from,
+      periodEnd: period.until,
+      periodLabel: period.label,
+      explanation:
+        lotId === null
+          ? 'Soma dos custos lançados no período selecionado, dentro do escopo da fazenda.'
+          : 'Soma dos custos lançados diretamente a este lote no período selecionado. ' +
+            'Custos gerais da fazenda não são incluídos.',
     },
 
     structure: {

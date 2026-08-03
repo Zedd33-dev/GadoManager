@@ -8,6 +8,13 @@
  * Every function takes `farmIds` and binds it into the query. Nothing here reads
  * herd data without a tenant scope.
  *
+ * Every function also accepts an optional `{lotId}` to narrow the same
+ * calculation to one lote, for the dashboard's lote filter. When `lotId` is
+ * `null` (the default) the clause is `(? IS NULL OR a.lot_id = ?)`, which is
+ * always true and therefore a no-op - the same statement serves both the
+ * filtered and unfiltered case, so there is no second code path to keep in
+ * sync with the first.
+ *
  * Dates arrive as ISO strings and are compared as strings, which is valid
  * because the schema enforces `YYYY-MM-DD` - lexicographic order and calendar
  * order coincide in that format.
@@ -23,7 +30,7 @@ import { ANIMAL_STATUS } from '../domain/constants.js';
  *
  * @returns {{total: number, ativo: number, vendido: number, morto: number, transferido: number}}
  */
-export function countAnimalsByStatus(db, farmIds) {
+export function countAnimalsByStatus(db, farmIds, { lotId = null } = {}) {
   const { placeholders, params } = inClause(farmIds);
 
   const row = db
@@ -35,9 +42,10 @@ export function countAnimalsByStatus(db, farmIds) {
          SUM(CASE WHEN status = 'morto'       THEN 1 ELSE 0 END)    AS morto,
          SUM(CASE WHEN status = 'transferido' THEN 1 ELSE 0 END)    AS transferido
        FROM animals
-       WHERE farm_id IN (${placeholders})`,
+       WHERE farm_id IN (${placeholders})
+         AND (? IS NULL OR lot_id = ?)`,
     )
-    .get(...params);
+    .get(...params, lotId, lotId);
 
   // SUM over zero rows returns NULL in SQL; the dashboard wants 0 there.
   return {
@@ -62,7 +70,7 @@ export function countAnimalsByStatus(db, farmIds) {
  *
  * @returns {{averageKg: number|null, animalCount: number}}
  */
-export function latestWeightAverage(db, farmIds) {
+export function latestWeightAverage(db, farmIds, { lotId = null } = {}) {
   const { placeholders, params } = inClause(farmIds);
 
   const row = db
@@ -77,13 +85,14 @@ export function latestWeightAverage(db, farmIds) {
          JOIN animals a ON a.id = w.animal_id
          WHERE a.farm_id IN (${placeholders})
            AND a.status = ?
+           AND (? IS NULL OR a.lot_id = ?)
        )
        SELECT AVG(weight_kg) AS average_kg,
               COUNT(*)       AS animal_count
        FROM latest
        WHERE rn = 1`,
     )
-    .get(...params, ANIMAL_STATUS.ACTIVE);
+    .get(...params, ANIMAL_STATUS.ACTIVE, lotId, lotId);
 
   return {
     averageKg: row.average_kg,
@@ -108,7 +117,7 @@ export function latestWeightAverage(db, farmIds) {
  *
  * @returns {{averageKgPerDay: number|null, animalCount: number}}
  */
-export function averageDailyGain(db, farmIds) {
+export function averageDailyGain(db, farmIds, { lotId = null } = {}) {
   const { placeholders, params } = inClause(farmIds);
 
   const row = db
@@ -123,6 +132,7 @@ export function averageDailyGain(db, farmIds) {
          JOIN animals a ON a.id = w.animal_id
          WHERE a.farm_id IN (${placeholders})
            AND a.status = ?
+           AND (? IS NULL OR a.lot_id = ?)
        ),
        pairs AS (
          SELECT curr.weight_kg - prev.weight_kg                          AS delta_kg,
@@ -138,7 +148,7 @@ export function averageDailyGain(db, farmIds) {
        FROM pairs
        WHERE delta_days > 0`,
     )
-    .get(...params, ANIMAL_STATUS.ACTIVE);
+    .get(...params, ANIMAL_STATUS.ACTIVE, lotId, lotId);
 
   return {
     averageKgPerDay: row.average_gain,
@@ -168,9 +178,11 @@ export function averageDailyGain(db, farmIds) {
  * @param {string} today ISO date
  * @param {string} horizon ISO date, end of the "a vencer" window
  */
-export function healthAlertCounts(db, farmIds, today, horizon) {
+export function healthAlertCounts(db, farmIds, today, horizon, { lotId = null } = {}) {
   // Named parameters throughout: `:today` appears five times, and SQLite will
-  // not mix named and anonymous placeholders in one statement.
+  // not mix named and anonymous placeholders in one statement. Unlike an
+  // anonymous `?`, a named parameter only needs to be bound once even if the
+  // query refers to it more than once.
   const { placeholders, params } = namedInClause(farmIds);
 
   const row = db
@@ -191,12 +203,14 @@ export function healthAlertCounts(db, farmIds, today, horizon) {
        JOIN animals a ON a.id = he.animal_id
        WHERE he.applied_date IS NULL
          AND a.status = :activeStatus
-         AND a.farm_id IN (${placeholders})`,
+         AND a.farm_id IN (${placeholders})
+         AND (:lotId IS NULL OR a.lot_id = :lotId)`,
     )
     .get({
       today,
       horizon,
       activeStatus: ANIMAL_STATUS.ACTIVE,
+      lotId,
       ...params,
     });
 
@@ -219,7 +233,7 @@ export function healthAlertCounts(db, farmIds, today, horizon) {
  *
  * @param {string} cutoff ISO date; a weighing on or after this counts as recent
  */
-export function animalsWithoutRecentWeighing(db, farmIds, cutoff) {
+export function animalsWithoutRecentWeighing(db, farmIds, cutoff, { lotId = null } = {}) {
   const { placeholders, params } = inClause(farmIds);
 
   const row = db
@@ -232,13 +246,14 @@ export function animalsWithoutRecentWeighing(db, farmIds, cutoff) {
        FROM animals a
        WHERE a.farm_id IN (${placeholders})
          AND a.status = ?
+         AND (? IS NULL OR a.lot_id = ?)
          AND NOT EXISTS (
            SELECT 1 FROM weighings w
            WHERE w.animal_id = a.id
              AND w.weigh_date >= ?
          )`,
     )
-    .get(...params, ANIMAL_STATUS.ACTIVE, cutoff);
+    .get(...params, ANIMAL_STATUS.ACTIVE, lotId, lotId, cutoff);
 
   return {
     total: row.total ?? 0,
@@ -256,10 +271,15 @@ export function animalsWithoutRecentWeighing(db, farmIds, cutoff) {
  * from "costs recorded that sum to zero". Rendering both as R$ 0,00 is the
  * defect this KPI exists to avoid.
  *
+ * When `lotId` is given, only costs allocated directly to that lote are
+ * summed - a farm-wide cost (`costs.lot_id IS NULL`) is deliberately excluded,
+ * since a lote's own cost figure should not silently absorb overhead that was
+ * never attributed to it.
+ *
  * @param {string} from ISO date, inclusive
  * @param {string} until ISO date, exclusive
  */
-export function costTotalInRange(db, farmIds, from, until) {
+export function costTotalInRange(db, farmIds, from, until, { lotId = null } = {}) {
   const { placeholders, params } = inClause(farmIds);
 
   const row = db
@@ -269,9 +289,10 @@ export function costTotalInRange(db, farmIds, from, until) {
        FROM costs
        WHERE farm_id IN (${placeholders})
          AND cost_date >= ?
-         AND cost_date <  ?`,
+         AND cost_date <  ?
+         AND (? IS NULL OR lot_id = ?)`,
     )
-    .get(...params, from, until);
+    .get(...params, from, until, lotId, lotId);
 
   return {
     totalCents: row.total_cents ?? 0,
@@ -281,6 +302,9 @@ export function costTotalInRange(db, farmIds, from, until) {
 
 /**
  * Farm and active-lot counts within scope.
+ *
+ * Not affected by a lote filter - "how many lotes exist" is a structural fact
+ * about the farm, not a figure that narrows to a single lote.
  */
 export function structureCounts(db, farmIds) {
   const { placeholders, params } = inClause(farmIds);
