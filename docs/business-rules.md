@@ -255,3 +255,49 @@ a carência that has already been served.
 Planned: costs allocated to a lote divide across the animals in that lote for the
 period; farm-wide costs divide across the farm's active herd. The exact
 apportionment rule will be documented here when implemented.
+
+---
+
+## 12. Composição do rebanho — classificação por faixa etária
+
+**Categorias:** bezerro(a), novilha, boi, vaca, touro.
+
+```
+idade < 12 meses               -> bezerro(a)  (qualquer sexo)
+12 <= idade < 36 meses, fêmea  -> novilha
+12 <= idade < 36 meses, macho  -> boi
+idade >= 36 meses, fêmea       -> vaca
+idade >= 36 meses, macho       -> touro
+```
+
+Thresholds are `CALF_MAX_AGE_MONTHS = 12` and `YOUNG_MAX_AGE_MONTHS = 36` in
+`src/domain/constants.js`.
+
+> **Stated approximation.** In a real operation, "novilha" versus "vaca" and
+> "boi" versus "touro" depend on reproductive status — whether a female has
+> calved, whether a male is used for breeding — not on age alone. This schema
+> does not track either. Classifying by age is a deliberate simplification,
+> disclosed here and in the dashboard's own copy, rather than an unstated
+> assumption. Restricted to active animals, for the same reason the weight and
+> GMD KPIs are: it describes the herd as it exists today.
+
+---
+
+## 13. Gráficos históricos — pesagens de animais que já saíram do rebanho
+
+**Rule:** the "Evolução do peso médio" and "Curva de GMD" charts include
+weighings from animals that have since been sold, died, or transferred. They
+are the only two places in the system that do **not** filter by
+`status = 'ativo'`.
+
+> **Why this is correct, not a bug.** A historical trend answers "what did the
+> herd weigh over time", not "what is the herd worth today" — the question the
+> `Peso médio (última pesagem)` KPI answers. An animal sold in June genuinely
+> weighed what it weighed in March; removing that data point after the fact
+> would be survivorship bias, understating the herd's real historical
+> performance. The two answer different questions and are allowed to disagree.
+
+Both charts use a fixed trailing 12-month window
+(`CHART_TREND_MONTHS` in `src/domain/constants.js`), independent of the
+dashboard's Período filter — a 30-day window would leave a monthly-bucketed
+line chart with one or two points.
