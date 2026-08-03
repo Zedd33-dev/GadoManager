@@ -1,0 +1,18 @@
+node_modules/
+
+# Local environment configuration
+.env
+
+# SQLite database files (recreated with `npm run migrate && npm run seed`)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# User uploads are stored outside the web root and are not source
+uploads/
+
+# Editor and OS noise
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
