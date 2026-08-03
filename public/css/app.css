@@ -462,6 +462,62 @@ summary:focus-visible {
   border-left-color: var(--color-info);
 }
 
+/* --- Chart grid --------------------------------------------------------------
+   Each canvas sits in a wrapper with a fixed height (never dictated by the
+   chart itself - maintainAspectRatio:false in charts.js relies on this) so a
+   chart can never stretch the page taller than its neighbours. 340px sits in
+   the 320-380px range called for on desktop; the responsive rule below
+   shortens it on a phone, where vertical space is scarcer. */
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: var(--space-4);
+}
+
+.chart-card {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.chart-card h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-base);
+}
+
+.chart-canvas-wrapper {
+  position: relative;
+  height: 340px;
+  margin-bottom: var(--space-3);
+}
+
+.chart-card details {
+  margin-top: var(--space-2);
+}
+
+.chart-card details summary {
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-info);
+}
+
+.chart-card .table {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 640px) {
+  .chart-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-canvas-wrapper {
+    height: 260px;
+  }
+}
+
 /* --- Diagnostics ------------------------------------------------------------
    Developer-facing panel (permissions, migration status), kept out of the
    main dashboard flow since it is not part of the herd-management UX. */

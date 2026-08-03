@@ -206,6 +206,233 @@
   <p class="hint"><%= kpis.healthAlerts.explanation %></p>
 </section>
 
+<section aria-labelledby="titulo-graficos">
+  <h2 id="titulo-graficos">Gráficos</h2>
+  <p class="hint">
+    Cada gráfico tem uma tabela equivalente, com os mesmos números — abra
+    "Ver dados em tabela" para consultar sem depender do gráfico.
+  </p>
+
+  <div class="chart-grid">
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-status">Status do rebanho</h3>
+      <% if (charts.herdStatus.total === 0) { %>
+        <p class="empty-state">Nenhum animal cadastrado neste escopo.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-herd-status"
+            role="img"
+            aria-label="Gráfico de rosca mostrando a distribuição do rebanho por status"
+            aria-describedby="tabela-grafico-status"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-status">
+            <caption class="visually-hidden">Distribuição do rebanho por status</caption>
+            <thead>
+              <tr><th scope="col">Status</th><th scope="col">Animais</th><th scope="col">%</th></tr>
+            </thead>
+            <tbody>
+              <% charts.herdStatus.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.status %></th>
+                  <td><%= fmt.formatNumber(row.count) %></td>
+                  <td><%= fmt.formatPercent(row.percent === null ? null : row.percent * 100) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-peso-lote">Peso médio por lote</h3>
+      <% if (charts.weightByLot.labels.length === 0) { %>
+        <p class="empty-state">Nenhuma pesagem registrada — registrar pesagem.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-weight-by-lot"
+            role="img"
+            aria-label="Gráfico de barras comparando o peso médio entre lotes, com a média do rebanho como referência"
+            aria-describedby="tabela-grafico-peso-lote"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-peso-lote">
+            <caption class="visually-hidden">Peso médio por lote</caption>
+            <thead>
+              <tr><th scope="col">Lote</th><th scope="col">Peso médio</th><th scope="col">Animais</th></tr>
+            </thead>
+            <tbody>
+              <% charts.weightByLot.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.lot %></th>
+                  <td><%= fmt.formatWeight(row.averageKg) %></td>
+                  <td><%= fmt.formatNumber(row.animalCount) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-composicao">Composição do rebanho</h3>
+      <p class="hint">
+        Classificação por idade e sexo. Como o sistema não registra status
+        reprodutivo, a categoria é aproximada apenas pela idade.
+      </p>
+      <% if (charts.herdComposition.labels.length === 0) { %>
+        <p class="empty-state">Nenhum animal ativo neste escopo.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-herd-composition"
+            role="img"
+            aria-label="Gráfico de barras mostrando a composição do rebanho por faixa etária e sexo"
+            aria-describedby="tabela-grafico-composicao"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-composicao">
+            <caption class="visually-hidden">Composição do rebanho por faixa etária e sexo</caption>
+            <thead>
+              <tr><th scope="col">Faixa</th><th scope="col">Machos</th><th scope="col">Fêmeas</th><th scope="col">Total</th></tr>
+            </thead>
+            <tbody>
+              <% charts.herdComposition.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.range %></th>
+                  <td><%= fmt.formatNumber(row.male) %></td>
+                  <td><%= fmt.formatNumber(row.female) %></td>
+                  <td><%= fmt.formatNumber(row.total) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-evolucao-peso">Evolução do peso médio</h3>
+      <p class="hint">
+        Últimos 12 meses, por lote. Inclui pesagens de animais que já saíram
+        do rebanho — um histórico não deve esconder o que realmente aconteceu.
+      </p>
+      <% if (charts.weightEvolution.series.length === 0) { %>
+        <p class="empty-state">Nenhuma pesagem registrada nos últimos 12 meses.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-weight-evolution"
+            role="img"
+            aria-label="Gráfico de linhas mostrando a evolução do peso médio por lote ao longo dos últimos 12 meses"
+            aria-describedby="tabela-grafico-evolucao-peso"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-evolucao-peso">
+            <caption class="visually-hidden">Evolução mensal do peso médio por lote</caption>
+            <thead>
+              <tr><th scope="col">Mês</th><th scope="col">Lote</th><th scope="col">Peso médio</th></tr>
+            </thead>
+            <tbody>
+              <% charts.weightEvolution.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.month %></th>
+                  <td><%= row.lot %></td>
+                  <td><%= fmt.formatWeight(row.averageKg) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-gmd">Curva de GMD</h3>
+      <p class="hint">Últimos 12 meses, por lote.</p>
+      <% if (charts.gmdCurve.series.length === 0) { %>
+        <p class="empty-state">Sem pesagens suficientes para calcular o GMD nos últimos 12 meses.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-gmd-curve"
+            role="img"
+            aria-label="Gráfico de linhas mostrando o ganho médio diário por lote ao longo dos últimos 12 meses"
+            aria-describedby="tabela-grafico-gmd"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-gmd">
+            <caption class="visually-hidden">GMD mensal por lote</caption>
+            <thead>
+              <tr><th scope="col">Mês</th><th scope="col">Lote</th><th scope="col">GMD</th></tr>
+            </thead>
+            <tbody>
+              <% charts.gmdCurve.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.month %></th>
+                  <td><%= row.lot %></td>
+                  <td><%= fmt.formatGmd(row.averageGmd) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+    <article class="chart-card">
+      <h3 id="titulo-grafico-custos">Custos por categoria</h3>
+      <p class="hint">Últimos 12 meses<% if (filters.lotId) { %>, apenas custos deste lote<% } %>.</p>
+      <% if (charts.costsByCategory.series.length === 0) { %>
+        <p class="empty-state">Nenhum custo lançado nos últimos 12 meses.</p>
+      <% } else { %>
+        <div class="chart-canvas-wrapper">
+          <canvas
+            id="chart-costs-by-category"
+            role="img"
+            aria-label="Gráfico de barras empilhadas mostrando os custos mensais por categoria"
+            aria-describedby="tabela-grafico-custos"
+          ></canvas>
+        </div>
+        <details>
+          <summary>Ver dados em tabela</summary>
+          <table class="table" id="tabela-grafico-custos">
+            <caption class="visually-hidden">Custos mensais por categoria</caption>
+            <thead>
+              <tr><th scope="col">Mês</th><th scope="col">Categoria</th><th scope="col">Valor</th></tr>
+            </thead>
+            <tbody>
+              <% charts.costsByCategory.rows.forEach(function (row) { %>
+                <tr>
+                  <th scope="row"><%= row.month %></th>
+                  <td><%= row.category %></td>
+                  <td><%= fmt.formatCurrency(row.amountCents) %></td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+        </details>
+      <% } %>
+    </article>
+
+  </div>
+</section>
+
 <details class="diagnostics">
   <summary>Diagnóstico do sistema</summary>
 
@@ -253,5 +480,9 @@
     </ul>
   <% } %>
 </details>
+
+<script type="application/json" id="chart-data"><%- chartsJson %></script>
+<script src="/static/vendor/chartjs/chart.umd.js" defer></script>
+<script src="/static/js/charts.js" defer></script>
 
 <%- include('partials/foot') %>

@@ -8,7 +8,16 @@ import { migrationStatus } from '../db/migrate.js';
 import { requireCapability } from '../middleware/auth.js';
 import { buildDashboardKpis } from '../services/kpiService.js';
 import { resolveDashboardFilters, buildFilterQuery } from '../services/dashboardFilters.js';
+import {
+  herdStatusChart,
+  weightByLotChart,
+  herdCompositionChart,
+  weightEvolutionChart,
+  gmdCurveChart,
+  costsByCategoryChart,
+} from '../services/chartDataService.js';
 import { todayIso } from '../lib/dates.js';
+import { toEmbeddableJson } from '../lib/safeJson.js';
 import { ANIMAL_STATUS, ANIMAL_STATUS_LABELS } from '../domain/constants.js';
 
 const router = Router();
@@ -43,9 +52,23 @@ router.get('/', requireCapability('dashboard:read'), (req, res) => {
     todos: kpis.herd.total,
   };
 
+  const scopeArgs = req.scope.effectiveFarmIds;
+  const lotOption = { lotId: filters.lotId };
+
+  const charts = {
+    herdStatus: herdStatusChart(kpis.herd),
+    weightByLot: weightByLotChart(db, scopeArgs, lotOption),
+    herdComposition: herdCompositionChart(db, scopeArgs, today, lotOption),
+    weightEvolution: weightEvolutionChart(db, scopeArgs, today, lotOption),
+    gmdCurve: gmdCurveChart(db, scopeArgs, today, lotOption),
+    costsByCategory: costsByCategoryChart(db, scopeArgs, today, lotOption),
+  };
+
   res.render('dashboard', {
     title: 'Painel',
     kpis,
+    charts,
+    chartsJson: toEmbeddableJson(charts),
     filters,
     herdCountByStatus,
     statusOptions: STATUS_OPTIONS,

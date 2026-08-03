@@ -79,6 +79,18 @@ export function createApp() {
     }),
   );
 
+  // Chart.js, served from the installed npm package rather than a CDN or a
+  // hand-copied file in public/. It is a real, versioned dependency
+  // (package.json / package-lock.json), so there is no second copy of the
+  // library to keep in sync - and the CSP's `script-src 'self'` is satisfied
+  // because the file is same-origin either way.
+  app.use(
+    '/static/vendor/chartjs',
+    express.static(path.join(ROOT_DIR, 'node_modules', 'chart.js', 'dist'), {
+      maxAge: isProduction ? '7d' : 0,
+    }),
+  );
+
   // Session, then the user it identifies.
   app.use(createSessionMiddleware());
   app.use(loadUser);
