@@ -8,6 +8,77 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 2 — Authentication, roles and tenant isolation (2026-08-03)
+
+Login, the three-role permission model, CSRF protection, security headers, and
+the multi-tenant scoping that Priority 5 requires a test for.
+
+### Added
+
+- **`src/domain/permissions.js`** — the capability matrix. Authorization is one
+  readable table rather than `if (role === 'admin')` scattered through handlers.
+- **`src/lib/password.js`** — Argon2id hashing via `@node-rs/argon2`, with OWASP
+  parameters stated explicitly (m = 19456 KiB, t = 2, p = 1).
+- **`src/services/authService.js`** — the login decision, isolated from HTTP.
+- **`src/repositories/userRepository.js`**, **`src/repositories/animalRepository.js`**
+  — all prepared statements with bound parameters.
+- **`src/middleware/session.js`** — SQLite-backed sessions, 8-hour lifetime,
+  `HttpOnly` + `SameSite=Lax` + `secure` in production, non-default cookie name.
+- **`src/middleware/csrf.js`** — synchronizer token pattern, written directly
+  rather than pulled from a package.
+- **`src/middleware/auth.js`** — `loadUser`, `requireLogin`, `requireCapability`.
+- **`src/middleware/tenant.js`** — `resolveTenantScope`, `requireFarmAccess`,
+  `inClause`.
+- **`src/routes/auth.js`**, **`src/views/auth/login.ejs`** — login and logout.
+- **`scripts/create-user.js`** (`npm run user:create`) — the application has no
+  public sign-up by design; this is how the first administrator is created.
+- **helmet** with an explicit content security policy restricted to same-origin.
+- **41 new tests**: the capability matrix, password hashing, the login decision,
+  and multi-tenant isolation.
+
+### Decisions
+
+- **CSRF is implemented, not imported.** It is about forty lines, the mechanism
+  must be explained in the thesis regardless, and the usual Express package
+  (`csurf`) is deprecated. Token comparison uses `crypto.timingSafeEqual`.
+- **The session id is regenerated on login.** Without it, an attacker who fixed
+  a known session id in the victim's browser beforehand would still hold a valid
+  id afterwards (session fixation).
+- **Failed logins are indistinguishable.** "No such account" and "wrong
+  password" return the identical result, and the unknown-account path verifies
+  against a decoy hash so it is not measurably faster. Otherwise the login form
+  becomes an account-enumeration oracle.
+- **The user is re-read from the database on every request** rather than trusted
+  from the session, so deactivating an account takes effect immediately instead
+  of at the user's next login.
+- **`requireCapability` fails closed.** An unrecognised capability name denies
+  everyone, so a typo in a route definition cannot silently grant access.
+- **An empty tenant scope compiles to `IN (NULL)`**, which matches no row. The
+  dangerous failure mode would be an empty scope degrading into an absent
+  filter; there is a test for exactly that.
+- **The post-login redirect target is validated.** Only same-site absolute paths
+  are honoured, so `/login?next=https://…` cannot turn the application into a
+  redirector for a phishing page.
+
+### Issue register
+
+Closes `SEC-02` (Argon2id), `SEC-03` (CSRF), `SEC-04` (EJS escapes by default
+and the CSP forbids inline script), `SEC-05` (server-side authorization),
+`SEC-06` (tenant isolation, with tests), `SEC-08` (security headers and session
+hardening).
+
+### Verified manually
+
+- `npm test` — 61 passing.
+- A 21-check end-to-end pass against a running server: anonymous access
+  redirects to login; `/health` stays public; CSP, `nosniff`, `frame-ancestors`
+  and cookie flags are set; POST without a token and POST with a forged token
+  are both refused with 403; a wrong password returns 401 with a generic
+  message; a correct login issues a new session cookie; `?fazenda=999` returns
+  403 while `?fazenda=1` returns 200; and an external `next` target is stripped.
+
+---
+
 ## Phase 1 — Database schema (2026-08-03)
 
 The complete data model as three numbered migrations. 16 domain tables, 24
