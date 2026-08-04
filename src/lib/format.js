@@ -180,6 +180,36 @@ export function formatArrobas(arrobas) {
 }
 
 /**
+ * Parses a pt-BR currency input string into integer centavos.
+ *
+ * The inverse of `formatCurrency`, for form fields where the user types a
+ * value like "1.500,00" or just "1500,00". Accepts a bare "1500" too, so a
+ * user who ignores the placeholder is not punished with a rejected form.
+ *
+ * @param {string|null|undefined} input
+ * @returns {number|null} integer centavos, or null if the input is empty or unparsable
+ */
+export function parseCurrencyToCents(input) {
+  if (typeof input !== 'string') return null;
+
+  const trimmed = input.trim();
+  if (trimmed === '') return null;
+
+  const stripped = trimmed.replace(/[^\d,.-]/g, '');
+  // A comma present means pt-BR notation: dots are thousands separators to
+  // discard, and the comma is the decimal point. No comma means the value is
+  // already in plain decimal form (e.g. typed as "1500.50").
+  const normalized = stripped.includes(',')
+    ? stripped.replace(/\./g, '').replace(',', '.')
+    : stripped;
+
+  const value = Number.parseFloat(normalized);
+  if (!Number.isFinite(value)) return null;
+
+  return Math.round(value * 100);
+}
+
+/**
  * Formats an animal's age, derived from a birth date, in years and months.
  *
  * @param {string|null|undefined} isoBirthDate

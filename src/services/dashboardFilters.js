@@ -17,6 +17,7 @@ import { ANIMAL_STATUS } from '../domain/constants.js';
 import { listInScope as listFarmsInScope } from '../repositories/farmRepository.js';
 import { listInScope as listLotsInScope, findInScope as findLotInScope } from '../repositories/lotRepository.js';
 import { PERIOD_PRESETS } from '../lib/period.js';
+import { buildQuery } from '../lib/queryString.js';
 
 /** Valid values for the `status` query parameter. */
 const STATUS_FILTER_VALUES = new Set([...Object.values(ANIMAL_STATUS), 'todos']);
@@ -78,21 +79,14 @@ export function resolveDashboardFilters(req, db) {
  * @returns {string}
  */
 export function buildFilterQuery(req, overrides = {}) {
-  const merged = {
+  const current = {
     fazenda: req.query.fazenda,
     lote: req.query.lote,
     status: req.query.status,
     periodo: req.query.periodo,
     de: req.query.de,
     ate: req.query.ate,
-    ...overrides,
   };
 
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(merged)) {
-    if (value === null || value === undefined || value === '') continue;
-    params.set(key, String(value));
-  }
-
-  return params.toString();
+  return buildQuery(current, overrides);
 }

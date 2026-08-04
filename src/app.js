@@ -7,8 +7,9 @@
  * Middleware order is deliberate and is the request lifecycle documented in
  * `docs/architecture.md`:
  *
- *   security headers -> body parsing -> static assets -> session -> load user
- *   -> flash -> CSRF token -> CSRF verification -> tenant scope -> routes -> errors
+ *   security headers -> body parsing (urlencoded + multipart) -> static assets
+ *   -> session -> load user -> flash -> CSRF token -> CSRF verification
+ *   -> tenant scope -> routes -> errors
  *
  * Each stage depends on the one before it: CSRF verification needs both a
  * parsed body and a session, and the tenant scope needs a loaded user.
@@ -23,11 +24,13 @@ import { createSessionMiddleware } from './middleware/session.js';
 import { csrfToken, verifyCsrf } from './middleware/csrf.js';
 import { loadUser, requireLogin } from './middleware/auth.js';
 import { flashMiddleware } from './middleware/flash.js';
+import { parseMultipartBody } from './middleware/upload.js';
 import { resolveTenantScope, requireFarmAccess } from './middleware/tenant.js';
 import * as format from './lib/format.js';
 import authRoutes from './routes/auth.js';
 import healthRoutes from './routes/health.js';
 import homeRoutes from './routes/home.js';
+import animalRoutes from './routes/animals.js';
 
 export function createApp() {
   const app = express();
@@ -71,6 +74,12 @@ export function createApp() {
   // which is all this application posts. The size limit bounds what an
   // unauthenticated caller can make the server parse.
   app.use(express.urlencoded({ extended: false, limit: '100kb' }));
+
+  // Multipart bodies (a form with a file input), parsed at the same point as
+  // urlencoded bodies above and for the same reason: verifyCsrf below reads
+  // req.body._csrf, and it must be populated no matter which encoding a form
+  // used.
+  app.use(parseMultipartBody);
 
   // Static assets. Mounted before the session so that serving a stylesheet does
   // not touch the session store.
@@ -122,6 +131,7 @@ export function createApp() {
   app.use(requireLogin);
   app.use(requireFarmAccess);
   app.use('/', homeRoutes);
+  app.use('/', animalRoutes);
 
   // Error handling, always last.
   app.use(notFoundHandler);

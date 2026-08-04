@@ -83,3 +83,18 @@ export const CHART_TREND_MONTHS = 12;
  */
 export const CALF_MAX_AGE_MONTHS = 12;
 export const YOUNG_MAX_AGE_MONTHS = 36;
+
+/** Breeds accepted by the schema's CHECK constraint. */
+export const BREEDS = Object.freeze(['nelore', 'angus', 'cruzado']);
+
+export const BREED_LABELS = Object.freeze({
+  nelore: 'Nelore',
+  angus: 'Angus',
+  cruzado: 'Cruzado',
+});
+
+/** MIME types accepted for an animal photo. */
+export const ALLOWED_PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
+
+/** Maximum photo size, in bytes. Generous enough for a phone camera photo. */
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
