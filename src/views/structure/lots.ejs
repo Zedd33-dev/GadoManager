@@ -1,0 +1,59 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Lotes</h1>
+<p class="lead">Contadores calculados a partir dos animais, sempre atualizados.</p>
+
+<div class="list-toolbar">
+  <% if (userCan('lots:write')) { %>
+    <a href="/lotes/novo" class="button button--primary">Novo lote</a>
+  <% } %>
+</div>
+
+<% if (lots.length === 0) { %>
+  <p class="empty-state">
+    Nenhum lote cadastrado.
+    <% if (userCan('lots:write')) { %> — <a href="/lotes/novo">cadastrar lote</a>.<% } %>
+  </p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Lotes</caption>
+      <thead>
+        <tr>
+          <th scope="col">Lote</th>
+          <th scope="col">Descrição</th>
+          <th scope="col">Animais ativos</th>
+          <th scope="col">Peso médio</th>
+          <% if (userCan('lots:write')) { %><th scope="col">Ações</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% lots.forEach(function (lot) { %>
+          <tr>
+            <th scope="row">
+              <%= lot.name %>
+              <% if (!lot.active) { %><span class="badge badge--warning">Inativo</span><% } %>
+              <span class="hint"><%= lot.farm_name %></span>
+            </th>
+            <td data-label="Descrição"><%= lot.description ?? '—' %></td>
+            <td data-label="Animais ativos"><%= fmt.formatNumber(lot.animal_count) %></td>
+            <td data-label="Peso médio"><%= fmt.formatWeight(lot.average_weight_kg) %></td>
+            <% if (userCan('lots:write')) { %>
+              <td data-label="Ações"><a href="/lotes/<%= lot.id %>/editar">Editar</a></td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    O peso médio usa a pesagem mais recente de cada animal ativo do lote, e
+    aparece como travessão quando nenhum deles foi pesado.
+  </p>
+<% } %>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Nova pesagem</h1>
+<p class="lead">Animal <strong><%= animal.ear_tag %></strong></p>
+
+<% if (outlier) { %>
+  <div class="alert alert--warning" role="alert">
+    <strong>Confira este peso.</strong> <%= outlier.reason %>
+  </div>
+<% } %>
+
+<form method="post" action="/animais/<%= animal.id %>/pesagens" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="weighDate">Data da pesagem</label>
+      <input type="date" id="weighDate" name="weighDate"
+             value="<%= values.weighDate ?? '' %>" max="<%= today %>" required
+             aria-invalid="<%= errors.weighDate ? 'true' : 'false' %>">
+      <% if (errors.weighDate) { %><p class="field-error"><%= errors.weighDate %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="weightKg">Peso (kg)</label>
+      <input type="text" inputmode="decimal" id="weightKg" name="weightKg"
+             value="<%= values.weightKg ?? '' %>" placeholder="482,5" required
+             aria-invalid="<%= errors.weightKg ? 'true' : 'false' %>">
+      <% if (errors.weightKg) { %><p class="field-error"><%= errors.weightKg %></p><% } %>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="notes">Observações (opcional)</label>
+    <textarea id="notes" name="notes" rows="2" maxlength="500"><%= values.notes ?? '' %></textarea>
+  </div>
+
+  <% if (outlier) { %>
+    <div class="field field--confirm">
+      <label>
+        <input type="checkbox" name="confirmOutlier" required>
+        Confirmo que este peso está correto
+      </label>
+      <p class="hint">
+        Um animal realmente pode perder peso. O aviso existe para pegar erro de
+        digitação, não para impedir o registro de um dado verdadeiro.
+      </p>
+    </div>
+  <% } %>
+
+  <button type="submit" class="button button--primary">Registrar pesagem</button>
+  <a href="/animais/<%= animal.id %>" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

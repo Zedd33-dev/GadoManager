@@ -1,0 +1,87 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Novo pasto' : `Editar ${pasture.name}` %></h1>
+
+<form method="post" action="<%= isCreate ? '/pastos' : `/pastos/${pasture.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (isCreate && farms.length > 1) { %>
+    <div class="field">
+      <label for="farmId">Fazenda</label>
+      <select id="farmId" name="farmId" required>
+        <option value="">Selecione…</option>
+        <% farms.forEach(function (farm) { %>
+          <option value="<%= farm.id %>" <%= values.farmId == farm.id ? 'selected' : '' %>><%= farm.name %></option>
+        <% }); %>
+      </select>
+    </div>
+  <% } %>
+
+  <div class="field">
+    <label for="name">Nome</label>
+    <input type="text" id="name" name="name" value="<%= values.name ?? '' %>" required maxlength="120"
+           aria-invalid="<%= errors.name ? 'true' : 'false' %>">
+    <% if (errors.name) { %><p class="field-error"><%= errors.name %></p><% } %>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="areaHa">Área em hectares</label>
+      <input type="text" inputmode="decimal" id="areaHa" name="areaHa"
+             value="<%= values.areaHa ?? '' %>" placeholder="120,5" required
+             aria-invalid="<%= errors.areaHa ? 'true' : 'false' %>">
+      <% if (errors.areaHa) { %><p class="field-error"><%= errors.areaHa %></p><% } %>
+      <p class="hint">É o denominador da taxa de lotação, por isso obrigatório.</p>
+    </div>
+
+    <div class="field">
+      <label for="forageType">Forrageira (opcional)</label>
+      <input type="text" id="forageType" name="forageType" value="<%= values.forageType ?? '' %>"
+             placeholder="Brachiaria brizantha cv. Marandu">
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="restPeriodDays">Período de descanso em dias (opcional)</label>
+      <input type="number" id="restPeriodDays" name="restPeriodDays" min="0"
+             value="<%= values.restPeriodDays ?? '' %>">
+      <% if (errors.restPeriodDays) { %><p class="field-error"><%= errors.restPeriodDays %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="maxStockingRateUaHa">Capacidade de suporte em UA/ha (opcional)</label>
+      <input type="text" inputmode="decimal" id="maxStockingRateUaHa" name="maxStockingRateUaHa"
+             value="<%= values.maxStockingRateUaHa ?? '' %>"
+             placeholder="<%= String(capacityPlaceholder).replace('.', ',') %>">
+      <% if (errors.maxStockingRateUaHa) { %><p class="field-error"><%= errors.maxStockingRateUaHa %></p><% } %>
+      <p class="hint">
+        Depende da forrageira, do solo e do manejo deste pasto. Sem esse valor
+        o sistema mostra a lotação calculada, mas não avisa sobre excesso —
+        não haveria contra o quê comparar.
+      </p>
+    </div>
+  </div>
+
+  <div class="field field--confirm">
+    <label>
+      <input type="checkbox" name="active" <%= values.active === 'on' ? 'checked' : '' %>>
+      Pasto ativo
+    </label>
+    <% if (typeof occupantCount !== 'undefined' && occupantCount > 0) { %>
+      <p class="hint">
+        Este pasto contém <%= occupantCount %> animal(is) ativo(s) e por isso não
+        pode ser desativado — movimente-os primeiro.
+      </p>
+    <% } %>
+    <% if (errors.active) { %><p class="field-error"><%= errors.active %></p><% } %>
+  </div>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Cadastrar' : 'Salvar alterações' %></button>
+  <a href="/pastos" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

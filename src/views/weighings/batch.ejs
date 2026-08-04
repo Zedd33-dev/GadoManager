@@ -1,0 +1,117 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Pesagem em lote</h1>
+<p class="lead">
+  Dia de pesagem: digite o brinco, <kbd>Tab</kbd>, o peso, <kbd>Enter</kbd> —
+  e a próxima linha já recebe o foco.
+</p>
+
+<% if (results) { %>
+  <section aria-labelledby="titulo-resultado" class="batch-results">
+    <h2 id="titulo-resultado">Resultado da conferência</h2>
+    <p class="alert alert--danger" role="alert">
+      Nada foi gravado. Um dia de pesagem é registrado por inteiro ou não é
+      registrado — corrija as linhas abaixo e envie novamente.
+    </p>
+
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Conferência das linhas enviadas</caption>
+      <thead>
+        <tr><th scope="col">Brinco</th><th scope="col">Situação</th></tr>
+      </thead>
+      <tbody>
+        <% results.forEach(function (result) { %>
+          <tr>
+            <th scope="row"><%= result.earTag %></th>
+            <td data-label="Situação">
+              <% if (result.ok) { %>
+                <span class="badge badge--success">OK</span>
+                <%= fmt.formatWeight(result.weightKg) %>
+                <% if (result.gmd !== null && result.gmd !== undefined) { %>
+                  — GMD <%= fmt.formatGmd(result.gmd) %>
+                <% } %>
+              <% } else if (result.isOutlier) { %>
+                <span class="badge badge--warning">Atenção</span>
+                <%= result.message %>
+              <% } else { %>
+                <span class="badge badge--danger">Erro</span>
+                <%= result.message %>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </section>
+<% } %>
+
+<form method="post" action="/pesagens/lote" class="record-form batch-form">
+  <%- include('../partials/csrfField') %>
+
+  <div class="field">
+    <label for="weighDate">Data da pesagem</label>
+    <input type="date" id="weighDate" name="weighDate" value="<%= weighDate %>" max="<%= today %>" required>
+  </div>
+
+  <% if (typeof hasBlockingOutlier !== 'undefined' && hasBlockingOutlier) { %>
+    <div class="field field--confirm">
+      <label>
+        <input type="checkbox" name="confirmOutliers">
+        Confirmo que as perdas de peso sinalizadas acima estão corretas
+      </label>
+      <p class="hint">
+        Um animal realmente pode perder peso na seca. Marque apenas se conferiu
+        os valores — a alternativa seria recusar um dado verdadeiro.
+      </p>
+    </div>
+  <% } %>
+
+  <div class="table-scroll">
+    <table class="table batch-table">
+      <caption class="visually-hidden">Linhas de pesagem</caption>
+      <thead>
+        <tr>
+          <th scope="col" class="batch-table__num">#</th>
+          <th scope="col">Brinco</th>
+          <th scope="col">Peso (kg)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% for (let i = 0; i < rowCount; i += 1) {
+             const submitted = submittedRows.find(function (r) { return r.index === i; }); %>
+          <tr>
+            <td class="batch-table__num"><%= i + 1 %></td>
+            <td>
+              <label class="visually-hidden" for="earTag-<%= i %>">Brinco da linha <%= i + 1 %></label>
+              <input
+                type="text" id="earTag-<%= i %>" name="earTag"
+                value="<%= submitted ? submitted.earTag : '' %>"
+                autocomplete="off" class="batch-input batch-input--tag">
+            </td>
+            <td>
+              <label class="visually-hidden" for="weightKg-<%= i %>">Peso da linha <%= i + 1 %></label>
+              <input
+                type="text" inputmode="decimal" id="weightKg-<%= i %>" name="weightKg"
+                value="<%= submitted ? submitted.rawWeight : '' %>"
+                autocomplete="off" class="batch-input batch-input--weight">
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    Linhas em branco são ignoradas. Só os animais <strong>ativos</strong> das
+    suas fazendas podem ser pesados.
+  </p>
+
+  <button type="submit" class="button button--primary">Registrar pesagens</button>
+  <a href="/pesagens" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/batchWeighing.js" defer></script>
+
+<%- include('../partials/foot') %>

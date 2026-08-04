@@ -1,0 +1,52 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Nova fazenda' : `Editar ${farm.name}` %></h1>
+
+<form method="post" action="<%= isCreate ? '/fazendas' : `/fazendas/${farm.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <div class="field">
+    <label for="name">Nome</label>
+    <input type="text" id="name" name="name" value="<%= values.name ?? '' %>" required maxlength="120"
+           aria-invalid="<%= errors.name ? 'true' : 'false' %>">
+    <% if (errors.name) { %><p class="field-error"><%= errors.name %></p><% } %>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="city">Município (opcional)</label>
+      <input type="text" id="city" name="city" value="<%= values.city ?? '' %>">
+    </div>
+    <div class="field">
+      <label for="state">UF (opcional)</label>
+      <select id="state" name="state">
+        <option value="">—</option>
+        <% states.forEach(function (uf) { %>
+          <option value="<%= uf %>" <%= values.state === uf ? 'selected' : '' %>><%= uf %></option>
+        <% }); %>
+      </select>
+      <% if (errors.state) { %><p class="field-error"><%= errors.state %></p><% } %>
+    </div>
+    <div class="field">
+      <label for="totalAreaHa">Área total em hectares (opcional)</label>
+      <input type="text" inputmode="decimal" id="totalAreaHa" name="totalAreaHa"
+             value="<%= values.totalAreaHa ?? '' %>" placeholder="1.240,5">
+      <% if (errors.totalAreaHa) { %><p class="field-error"><%= errors.totalAreaHa %></p><% } %>
+    </div>
+  </div>
+
+  <% if (isCreate) { %>
+    <p class="hint">
+      Sua conta receberá acesso a esta fazenda automaticamente — do contrário
+      ela ficaria fora do seu escopo e invisível para você.
+    </p>
+  <% } %>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Cadastrar' : 'Salvar alterações' %></button>
+  <a href="/fazendas" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

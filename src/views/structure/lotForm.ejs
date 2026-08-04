@@ -1,0 +1,54 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Novo lote' : `Editar ${lot.name}` %></h1>
+
+<form method="post" action="<%= isCreate ? '/lotes' : `/lotes/${lot.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (isCreate && farms.length > 1) { %>
+    <div class="field">
+      <label for="farmId">Fazenda</label>
+      <select id="farmId" name="farmId" required>
+        <option value="">Selecione…</option>
+        <% farms.forEach(function (farm) { %>
+          <option value="<%= farm.id %>" <%= values.farmId == farm.id ? 'selected' : '' %>><%= farm.name %></option>
+        <% }); %>
+      </select>
+    </div>
+  <% } %>
+
+  <div class="field">
+    <label for="name">Nome</label>
+    <input type="text" id="name" name="name" value="<%= values.name ?? '' %>" required maxlength="120"
+           aria-invalid="<%= errors.name ? 'true' : 'false' %>">
+    <% if (errors.name) { %><p class="field-error"><%= errors.name %></p><% } %>
+  </div>
+
+  <div class="field">
+    <label for="description">Descrição (opcional)</label>
+    <input type="text" id="description" name="description" value="<%= values.description ?? '' %>"
+           placeholder="Ex.: recria de machos">
+  </div>
+
+  <div class="field field--confirm">
+    <label>
+      <input type="checkbox" name="active" <%= values.active === 'on' ? 'checked' : '' %>>
+      Lote ativo
+    </label>
+    <% if (typeof occupantCount !== 'undefined' && occupantCount > 0) { %>
+      <p class="hint">
+        Este lote contém <%= occupantCount %> animal(is) ativo(s) e por isso não
+        pode ser desativado — movimente-os primeiro.
+      </p>
+    <% } %>
+    <% if (errors.active) { %><p class="field-error"><%= errors.active %></p><% } %>
+  </div>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Cadastrar' : 'Salvar alterações' %></button>
+  <a href="/lotes" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

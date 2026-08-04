@@ -1,0 +1,90 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Pastos</h1>
+<p class="lead">
+  Taxa de lotação em UA/ha — uma unidade animal equivale a 450 kg de peso vivo.
+</p>
+
+<div class="list-toolbar">
+  <% if (userCan('pastures:write')) { %>
+    <a href="/pastos/novo" class="button button--primary">Novo pasto</a>
+  <% } %>
+</div>
+
+<% if (rows.length === 0) { %>
+  <p class="empty-state">
+    Nenhum pasto cadastrado.
+    <% if (userCan('pastures:write')) { %> — <a href="/pastos/novo">cadastrar pasto</a>.<% } %>
+  </p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Pastos e taxa de lotação</caption>
+      <thead>
+        <tr>
+          <th scope="col">Pasto</th>
+          <th scope="col">Área</th>
+          <th scope="col">Forragem</th>
+          <th scope="col">Animais</th>
+          <th scope="col">UA</th>
+          <th scope="col">Lotação</th>
+          <th scope="col">Situação</th>
+          <% if (userCan('pastures:write')) { %><th scope="col">Ações</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <th scope="row">
+              <%= row.name %>
+              <% if (!row.active) { %><span class="badge badge--warning">Inativo</span><% } %>
+              <span class="hint"><%= row.farm_name %></span>
+            </th>
+            <td data-label="Área"><%= fmt.formatArea(row.area_ha) %></td>
+            <td data-label="Forragem"><%= row.forage_type ?? '—' %></td>
+            <td data-label="Animais">
+              <%= fmt.formatNumber(row.animal_count) %>
+              <% if (row.stocking.isUnderestimate) { %>
+                <span class="hint">
+                  (<%= row.occupancy.animalsWithoutWeight %> sem pesagem)
+                </span>
+              <% } %>
+            </td>
+            <td data-label="UA"><%= fmt.formatNumber(row.stocking.animalUnits, 1) %></td>
+            <td data-label="Lotação">
+              <%= fmt.formatStockingRate(row.stocking.stockingRate) %>
+              <% if (row.max_stocking_rate_ua_ha !== null) { %>
+                <span class="hint">de <%= fmt.formatStockingRate(row.max_stocking_rate_ua_ha) %></span>
+              <% } %>
+            </td>
+            <td data-label="Situação">
+              <span class="badge badge--<%= statusVariants[row.stocking.status] %>">
+                <%= statusLabels[row.stocking.status] %>
+              </span>
+              <% if (row.stocking.isUnderestimate && row.stocking.stockingRate !== null) { %>
+                <p class="hint">
+                  Valor mínimo: exclui animais sem pesagem.
+                </p>
+              <% } %>
+            </td>
+            <% if (userCan('pastures:write')) { %>
+              <td data-label="Ações"><a href="/pastos/<%= row.id %>/editar">Editar</a></td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    A lotação é calculada a partir da pesagem mais recente de cada animal ativo
+    no pasto. Animais nunca pesados ocupam o pasto mas não entram na conta —
+    por isso a linha avisa quando o número é um mínimo, em vez de apresentar
+    uma estimativa como se fosse medida.
+  </p>
+<% } %>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

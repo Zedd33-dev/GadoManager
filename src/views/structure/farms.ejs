@@ -1,0 +1,53 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Fazendas</h1>
+<p class="lead">Somente as fazendas às quais sua conta tem acesso.</p>
+
+<div class="list-toolbar">
+  <% if (userCan('farms:write')) { %>
+    <a href="/fazendas/nova" class="button button--primary">Nova fazenda</a>
+  <% } %>
+</div>
+
+<% if (farms.length === 0) { %>
+  <p class="empty-state">Nenhuma fazenda vinculada à sua conta.</p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Fazendas</caption>
+      <thead>
+        <tr>
+          <th scope="col">Fazenda</th>
+          <th scope="col">Município / UF</th>
+          <th scope="col">Área total</th>
+          <th scope="col">Área em pastos</th>
+          <th scope="col">Animais ativos</th>
+          <th scope="col">Lotes / Pastos</th>
+          <% if (userCan('farms:write')) { %><th scope="col">Ações</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% farms.forEach(function (farm) { %>
+          <tr>
+            <th scope="row"><%= farm.name %></th>
+            <td data-label="Município / UF">
+              <%= farm.city ?? '—' %><% if (farm.state) { %> / <%= farm.state %><% } %>
+            </td>
+            <td data-label="Área total"><%= fmt.formatArea(farm.total_area_ha) %></td>
+            <td data-label="Área em pastos"><%= fmt.formatArea(farm.pasture_area_ha) %></td>
+            <td data-label="Animais ativos"><%= fmt.formatNumber(farm.active_animals) %></td>
+            <td data-label="Lotes / Pastos"><%= farm.lot_count %> / <%= farm.pasture_count %></td>
+            <% if (userCan('farms:write')) { %>
+              <td data-label="Ações"><a href="/fazendas/<%= farm.id %>/editar">Editar</a></td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+<% } %>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

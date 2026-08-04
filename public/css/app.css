@@ -1020,6 +1020,83 @@ summary:focus-visible {
   color: var(--color-text-muted);
 }
 
+/* --- Batch weighing entry ---------------------------------------------------
+   Rows are rendered server-side so the screen works without JavaScript; the
+   keyboard flow in public/js/batchWeighing.js is enhancement on top. */
+
+.batch-table__num {
+  width: 3rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.batch-input {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.batch-table td {
+  padding: var(--space-1) var(--space-2);
+}
+
+.batch-results {
+  margin-bottom: var(--space-6);
+}
+
+.field--confirm {
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-warning-bg);
+  border: 1px solid var(--color-warning);
+  border-radius: var(--radius);
+}
+
+.field--confirm label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-weight: 600;
+}
+
+kbd {
+  padding: 0.1em 0.4em;
+  font-family: inherit;
+  font-size: 0.9em;
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+/* --- Weight delta ----------------------------------------------------------
+   Colour is a redundant cue only: the sign (+/-) carries the same meaning, so
+   the information survives for a colour-blind reader. */
+
+.delta {
+  font-weight: 600;
+}
+
+.delta--positive {
+  color: var(--color-success);
+}
+
+.delta--negative {
+  color: var(--color-danger);
+}
+
+.alert--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+}
+
 /* --- Diagnostics ------------------------------------------------------------
    Developer-facing panel (permissions, migration status), kept out of the
    main dashboard flow since it is not part of the herd-management UX. */

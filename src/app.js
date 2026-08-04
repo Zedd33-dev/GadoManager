@@ -31,6 +31,8 @@ import authRoutes from './routes/auth.js';
 import healthRoutes from './routes/health.js';
 import homeRoutes from './routes/home.js';
 import animalRoutes from './routes/animals.js';
+import weighingRoutes from './routes/weighings.js';
+import structureRoutes from './routes/structure.js';
 
 export function createApp() {
   const app = express();
@@ -132,6 +134,8 @@ export function createApp() {
   app.use(requireFarmAccess);
   app.use('/', homeRoutes);
   app.use('/', animalRoutes);
+  app.use('/', weighingRoutes);
+  app.use('/', structureRoutes);
 
   // Error handling, always last.
   app.use(notFoundHandler);

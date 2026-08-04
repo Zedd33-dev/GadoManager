@@ -10,6 +10,9 @@
     </p>
   </div>
   <div class="record-actions">
+    <% if (userCan('weighings:write') && animal.status === 'ativo') { %>
+      <a href="/animais/<%= animal.id %>/pesagens/nova" class="button button--primary">Nova pesagem</a>
+    <% } %>
     <% if (userCan('animals:write')) { %>
       <a href="/animais/<%= animal.id %>/editar" class="button">Editar</a>
     <% } %>
@@ -79,7 +82,10 @@
     <h2 id="titulo-curva-peso">Curva de peso</h2>
     <% if (weightChart.values.length === 0) { %>
       <p class="empty-state">
-        Nenhuma pesagem registrada — registrar pesagem.
+        Nenhuma pesagem registrada
+        <% if (userCan('weighings:write') && animal.status === 'ativo') { %>
+          — <a href="/animais/<%= animal.id %>/pesagens/nova">registrar pesagem</a>
+        <% } %>.
       </p>
     <% } else { %>
       <div class="chart-canvas-wrapper">
