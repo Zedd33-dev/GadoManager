@@ -287,7 +287,7 @@ whoever has to act on it.
 
 ---
 
-## 10. Período de carência — *pendente, Fase 10*
+## 10. Período de carência
 
 The withdrawal period is the number of days after a product is applied during
 which the animal may not be slaughtered.
@@ -296,9 +296,97 @@ which the animal may not be slaughtered.
 liberado_em = data_aplicacao + carência_dias
 ```
 
+Implemented in `evaluateWithdrawal` (`src/services/healthService.js`).
+
+### Rules
+
+- **Withdrawal counts from application, never from the scheduled date.** A dose
+  that was due but never applied starts no carência at all.
+- **The animal is clear *on* the release day**, not the day after. Both
+  boundaries are pinned by test.
+- **A zero carência never blocks.** Not every product has one.
+- **When several products overlap, the latest release date binds.** Clearing one
+  product does not clear the animal while another is still in effect, and the
+  interface names which product is the binding one.
+
+### Why the value is copied, not referenced
+
 `withdrawal_days` is copied from the protocol onto the `health_events` row **at
-scheduling time**, so a later edit to the protocol does not retroactively change
-a carência that has already been served.
+scheduling time** rather than read through a join. Editing a protocol must not
+retroactively change a carência that has already been served — the days that
+applied are the days that were in force when the dose was given.
+
+---
+
+## 16. Agendamento automático por protocolo
+
+A protocol schedules doses in one of two modes, both stored on the protocol row:
+
+| Mode | Date computed as |
+| --- | --- |
+| `por_idade` | `data_nascimento + age_days`, **per animal** |
+| `por_data` | a single date chosen at scheduling time |
+
+Age-based scheduling is the reason one protocol applied to a whole lote produces
+a *different* date for each animal — which is the point of the feature.
+
+`interval_days`, when set, schedules a booster (reforço) that many days after the
+first dose.
+
+> **An age-based date in the past is kept, not shifted to today.** An animal
+> already older than the target age genuinely *is* overdue for that dose; moving
+> the date forward would hide a real gap in the herd's sanitary history behind a
+> tidy-looking schedule.
+
+### The calendar itself is data, not code
+
+No vaccine, product or interval is hardcoded anywhere in the application. A
+protocol is a row the user creates and edits at `/protocolos`. Which vaccines a
+herd needs depends on the state, the year and current legislation, so a calendar
+written into source would be both indefensible and destined to go stale.
+
+> **The seeded calendar is PROVISIONAL.** It omits *febre aftosa* deliberately:
+> Brazil was recognised free of foot-and-mouth disease **without vaccination** in
+> 2025, so a routine aftosa campaign in a 2026 dataset would be an anachronism.
+> What it seeds instead — brucelose (females, 3–8 months), clostridioses, raiva,
+> and vermifugação — should be confirmed against the thesis references before the
+> defense.
+
+---
+
+## 17. Movimentação e a localização atual
+
+`animals.lot_id` and `animals.pasture_id` are a deliberate denormalisation of the
+movement history, so the dashboard can filter by lote without a correlated
+subquery over every movement ever recorded.
+
+That denormalisation is only safe if the two can never disagree, so **recording a
+movement and updating the animal's location happen in one transaction**
+(`recordMovements`). This is issue `DAT-04`.
+
+- A destination of `null` for lot or pasture means **leave that one unchanged**,
+  so an animal can move between paddocks without disturbing its lote.
+- A movement that changes neither is rejected — it is not a movement.
+- Moving between farms is legitimate, but only within the caller's own scope, and
+  the schema's `UNIQUE(farm_id, ear_tag)` still applies: a batch whose ear tag
+  would collide on the destination farm fails **entirely**, leaving the herd
+  untouched rather than half-moved.
+
+---
+
+## 18. Doses atrasadas: numerador e denominador
+
+The alert panel reports overdue doses **and** the number of animals they span,
+per kind:
+
+> 40 doses de vacina atrasadas em 33 animais
+
+Both numbers must describe the **same population**. Counting distinct animals
+across vaccines *and* treatments while reporting only the vaccine dose count
+produced "40 doses de vacina em 49 animais" — a denominator larger than the
+numerator, which is impossible for a per-kind statement since a dose belongs to
+exactly one animal. Fixed in Phase 10 with per-kind animal counts and a
+regression test.
 
 ---
 

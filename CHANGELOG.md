@@ -8,6 +8,95 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 10 — Vacinas, Tratamentos, protocolos, carência and Movimentações (2026-08-03)
+
+The sanitary modules and the atomic location update. This is the phase where
+the dashboard's alert panel — the original defect report that started the
+project — finally has real data behind it.
+
+### Added
+
+- **`src/services/healthService.js`** — carência evaluation, overdue
+  classification, protocol scheduling, and validation.
+- **`src/services/movementService.js`** — movement legality rules.
+- **`src/repositories/healthRepository.js`**, **`movementRepository.js`**.
+- **`src/routes/health.js`** (Vacinas, Tratamentos, Protocolos, scheduling,
+  applying a dose) and **`src/routes/movements.js`**.
+- **Nine views**, plus `public/js/selectAll.js` for the animal pickers.
+- **A provisional sanitary calendar in the seed**: 8 protocols across the two
+  farms producing ~407 doses, ~340 applied and ~60 genuinely overdue.
+- **35 new tests**, plus a 33-check end-to-end pass.
+
+### Fixed
+
+- **The alert panel reported a denominator from a different population.**
+  It showed the overdue *vaccine* dose count beside `COUNT(DISTINCT animal_id)`
+  taken across vaccines **and** treatments, producing "40 doses de vacina
+  atrasadas em 49 animais" — a denominator larger than the numerator, which is
+  impossible per kind since a dose belongs to exactly one animal. Now reports
+  per-kind animal counts (40 doses em 33 animais), with a regression test.
+  Found by this phase's own end-to-end check, and it is precisely the class of
+  misleading count the project was started to eliminate.
+- **`src/routes/health.js` was accidentally overwritten** — the liveness probe
+  already lived there. Recovered from git into `routes/healthcheck.js`, which
+  is the clearer name anyway now that a sanitary module exists.
+
+### Decisions
+
+- **The sanitary calendar is data, not code.** No vaccine, product or interval
+  is hardcoded: a protocol is a row the user edits at `/protocolos`. Which
+  vaccines a herd needs depends on the state, the year and current
+  legislation, so a calendar written into source would be indefensible and
+  would go stale. The seeded one is labelled PROVISIONAL in the code, in the
+  seed's own output, and in `docs/business-rules.md`.
+- **The seeded calendar omits febre aftosa deliberately.** Brazil was
+  recognised free of foot-and-mouth disease *without vaccination* in 2025, so
+  a routine aftosa campaign in a 2026 dataset would be an anachronism an
+  examiner could catch.
+- **Carência counts from application, never from the scheduled date**, and the
+  animal is clear *on* the release day. Where several products overlap the
+  latest release date binds, and the interface names which product it is.
+- **`withdrawal_days` is copied onto the dose at scheduling time**, not read
+  through a join, so editing a protocol cannot retroactively change a carência
+  already served.
+- **An age-based dose scheduled into the past is kept, not shifted to today.**
+  An animal already past the target age genuinely is overdue; moving the date
+  forward would hide a real gap behind a tidy schedule.
+- **A movement writes history and current location in one transaction**
+  (`DAT-04`). A `null` destination leaves that dimension unchanged, so moving
+  between paddocks does not disturb the lote. A cross-farm batch that would
+  collide with an existing ear tag fails entirely rather than half-moving the
+  herd — proven by test.
+- **An already-applied dose cannot be applied again**, enforced by
+  `applied_date IS NULL` in the `UPDATE` itself, so a double submission cannot
+  restart the carência clock from a later date.
+
+### Issue register
+
+Closes the Vacinas, Tratamentos and Movimentações bullets of
+`Missing features`, including protocol templates, age- and date-based
+auto-scheduling, carência tracking with a sale-blocking warning, and dose,
+product and applicator fields. Closes `DAT-04`.
+
+### Verified manually
+
+- `npm test` — 331 passing.
+- A 33-check end-to-end pass: Vacinas and Tratamentos are proven to be two
+  filtered views over one table with no leakage between them; the overdue
+  filter applies all three conditions; a dose can be applied once and not
+  twice; a future-dated application is rejected; a movement's atomic update is
+  visible on the animal afterwards; a movement changing nothing is rejected; a
+  `peão` can read the sanitary lists and apply doses but is blocked
+  server-side from creating protocols or movements; and a Santa Clara manager
+  sees only `SC-` tagged animals in both the page and the CSV.
+- One end-to-end failure turned out to be a false alarm in the check itself —
+  a regex matching a hardcoded `placeholder="Ex.: BV-0001"` rather than leaked
+  data. Verified against the database and the rendered rows before concluding;
+  the placeholder was removed anyway, since showing a Santa Clara user an
+  example tag from a farm they cannot see is misleading.
+
+---
+
 ## Phase 9 — Pesagens, Lotes, Pastos and Fazendas (2026-08-03)
 
 Four modules, the keyboard-first weighing-day screen, and the two new domain
