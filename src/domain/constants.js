@@ -98,3 +98,32 @@ export const ALLOWED_PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'im
 
 /** Maximum photo size, in bytes. Generous enough for a phone camera photo. */
 export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Relative weight loss between two consecutive weighings that flags an
+ * outlier, as a fraction (0.05 = 5%).
+ *
+ * This is a *data-entry* check, not a biological one: an animal genuinely can
+ * lose weight - the dry season model in the demo seed produces exactly that -
+ * so a flagged weighing is warned about and still recordable, never rejected.
+ * What it catches is the far more common cause of a sudden 40% drop, which is
+ * a digit dropped while typing (382 entered as 38).
+ *
+ * Expressed as a percentage rather than an absolute number of kilograms so
+ * that it scales: 20 kg is unremarkable for a finished steer and alarming for
+ * a calf.
+ */
+export const WEIGHT_LOSS_OUTLIER_FRACTION = 0.05;
+
+/**
+ * Fallback carrying capacity, in UA/ha, used only for a pasture whose
+ * `max_stocking_rate_ua_ha` was never informed.
+ *
+ * PROVISIONAL - confirm against the thesis references before the defense.
+ * Carrying capacity depends on forage species, soil, rainfall and management;
+ * see `migrations/004_pasture_stocking_capacity.sql` for why it is stored per
+ * pasture rather than hardcoded. Where a pasture has no informed capacity the
+ * interface reports the computed rate without judging it, so this constant
+ * only ever fills a placeholder in the form, never a warning threshold.
+ */
+export const PROVISIONAL_STOCKING_CAPACITY_UA_HA = 1.2;
