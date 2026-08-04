@@ -106,6 +106,8 @@ export function buildDashboardKpis(db, farmIds, options = {}) {
       overdueTreatmentDoses: alerts.overdueTreatmentDoses,
       overdueTotalDoses: alerts.overdueVaccineDoses + alerts.overdueTreatmentDoses,
       overdueAnimals: alerts.overdueAnimals,
+      overdueVaccineAnimals: alerts.overdueVaccineAnimals,
+      overdueTreatmentAnimals: alerts.overdueTreatmentAnimals,
       dueSoonDoses: alerts.dueSoonDoses,
       dueSoonAnimals: alerts.dueSoonAnimals,
       windowDays: UPCOMING_WINDOW_DAYS,

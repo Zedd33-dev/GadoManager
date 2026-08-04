@@ -194,6 +194,17 @@ export function healthAlertCounts(db, farmIds, today, horizon, { lotId = null } 
                    AND he.scheduled_date < :today THEN 1 ELSE 0 END)    AS overdue_treatment_doses,
          COUNT(DISTINCT CASE WHEN he.scheduled_date < :today
                              THEN he.animal_id END)                     AS overdue_animals,
+         -- Per-kind animal counts, because the union across both kinds cannot
+         -- describe either one. Reporting "39 doses de vacina em 49 animais"
+         -- - where 49 counts animals overdue on treatments too - is exactly
+         -- the kind of mismatched numerator and denominator this dashboard
+         -- exists to stop.
+         COUNT(DISTINCT CASE WHEN he.kind = 'vacina'
+                              AND he.scheduled_date < :today
+                             THEN he.animal_id END)                     AS overdue_vaccine_animals,
+         COUNT(DISTINCT CASE WHEN he.kind = 'tratamento'
+                              AND he.scheduled_date < :today
+                             THEN he.animal_id END)                     AS overdue_treatment_animals,
          SUM(CASE WHEN he.scheduled_date >= :today
                    AND he.scheduled_date <= :horizon THEN 1 ELSE 0 END) AS due_soon_doses,
          COUNT(DISTINCT CASE WHEN he.scheduled_date >= :today
@@ -218,6 +229,8 @@ export function healthAlertCounts(db, farmIds, today, horizon, { lotId = null } 
     overdueVaccineDoses: row.overdue_vaccine_doses ?? 0,
     overdueTreatmentDoses: row.overdue_treatment_doses ?? 0,
     overdueAnimals: row.overdue_animals ?? 0,
+    overdueVaccineAnimals: row.overdue_vaccine_animals ?? 0,
+    overdueTreatmentAnimals: row.overdue_treatment_animals ?? 0,
     dueSoonDoses: row.due_soon_doses ?? 0,
     dueSoonAnimals: row.due_soon_animals ?? 0,
   };
