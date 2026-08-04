@@ -8,6 +8,119 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 8 — Animais module and reusable list infrastructure (2026-08-03)
+
+The first full CRUD module, and the list/pagination/sort/search/CSV/bulk-action
+infrastructure every later module (Pesagens, Vacinas, Vendas, Custos...)
+reuses rather than reimplements.
+
+### Added
+
+- **`src/lib/pagination.js`**, **`src/lib/sorting.js`**, **`src/lib/csv.js`**,
+  **`src/lib/queryString.js`** — framework-free, fully reusable. `sorting.js`
+  is the one that matters most: a column name can never be a bound SQL
+  parameter, so it works by allow-listing `{publicKey: sqlExpression}` and
+  falling back to the default for anything else - a SQL-injection attempt in
+  `?sort=` is simply an unrecognised key.
+- **`src/lib/upload.js`** — photo storage outside `public/`, plus
+  `sniffImageType`: validation by the file's actual magic bytes, not the
+  browser-supplied (trivially spoofable) `Content-Type`.
+- **`src/middleware/upload.js`** — parses multipart bodies globally, at the
+  same point as `express.urlencoded()`, so `verifyCsrf` sees `req.body._csrf`
+  regardless of which encoding a form used (see Decisions).
+- **`src/services/animalService.js`** — list-query parsing and full
+  create/edit validation, shared by both routes so a rule fixed once cannot
+  stay broken in the other path.
+- **`src/repositories/animalRepository.js`** extended with search/sort/
+  filter/pagination, `findWithDetailsInScope`, `getTimeline`,
+  `getWeightHistory`, `listCandidateMothers`, and scoped insert/update/
+  delete. **`pastureRepository.js`** added to match `lotRepository.js`.
+- **`src/routes/animals.js`** and three views (`index`, `form`, `show`):
+  list with search/filter/sort/pagination/CSV export/bulk delete; a shared
+  create/edit form; a detail page with a weight-curve chart (reusing the
+  Chart.js pattern from Phase 6) and a merged weighing/health/movement
+  timeline.
+- **A native `<dialog>` confirmation component** (`partials/confirmDialog.ejs`,
+  `public/js/bulkActions.js`) - the component Phase 7 deferred for lack of a
+  destructive action. It has one now.
+- **51 new tests.**
+
+### Decisions
+
+- **Bulk delete is a real, hard `DELETE`, admin-only.** Every other exit from
+  the herd (venda, morte, transferência) is a status change precisely so the
+  history survives; this exists only to correct a genuine data-entry mistake,
+  which is why `animals:delete` (defined back in Phase 2, unused until now)
+  gates it. Cascades to the animal's weighings, health events, movements and
+  sale items via the schema's own `ON DELETE CASCADE` - confirmed by test.
+- **Multipart bodies are parsed globally, not per-route.** `verifyCsrf` is
+  deliberately global so a new route can never forget CSRF protection, and it
+  reads `req.body._csrf` - which stays empty for a multipart request unless
+  multer already ran. Rather than weaken the "CSRF cannot be forgotten"
+  guarantee for file-upload routes, multipart parsing was added to the global
+  body-parsing stage, right next to `express.urlencoded()`.
+- **An uploaded photo is validated twice.** `multer`'s `fileFilter` only ever
+  sees the browser's claimed MIME type, which is just a string the client
+  sent. `sniffImageType` reads the actual bytes written to disk against real
+  JPEG/PNG/WebP signatures and deletes the file if they do not match -
+  closing SEC-07 for real, not by trusting a header.
+- **Photos are stored under `data/uploads/`, never `public/`.** Anything under
+  `public/` is served to anyone with the URL, with no session check and no
+  tenant scope. Photos are only ever served through `GET /animais/:id/foto`,
+  which re-checks the animal is in the caller's scope on every request, and
+  filenames are random UUIDs so a URL cannot be guessed from an animal's id.
+- **The edit form can only set `status` to `ativo` or `transferido`.**
+  Setting `vendido` or `morto` directly would create a status with no
+  supporting record (no sale, no death entry) - those transitions belong to
+  Vendas (Phase 11) and a death-recording flow, both of which will produce
+  the right side effects. The disabled options in the form say so.
+- **The create form has no photo field.** A photo is added afterward from the
+  detail page. Holding an uploaded file across a validation-failure redirect
+  would need either a temp-file lifecycle or forcing the user to re-upload on
+  every retry; letting the animal exist first and attaching the photo second
+  avoids both.
+- **Lot/pasture/mother choices are the full scope's list, not
+  JavaScript-cascaded by farm.** Consistent with this project's working GET
+  forms: an admin managing two farms sees every lot labelled with its farm
+  name and picks the right one directly; the server independently verifies
+  the choice belongs to the submitted farm, so a mismatched selection is a
+  validation error, not a trust boundary.
+- **CSV uses a semicolon delimiter with pt-BR-formatted values, not a comma.**
+  Every number in this system already renders with a comma decimal
+  (`lib/format.js`); a comma-delimited CSV would misparse "1.234,5" into two
+  fields the moment a real weight hit a cell. Semicolon is also what Excel's
+  Brazilian locale expects without an import wizard, and a UTF-8 BOM is
+  prepended so accented characters do not get mangled.
+
+### Issue register
+
+Closes `SEC-07` (upload validated by content and size, stored outside the web
+root). Substantially closes the "Animais" bullet of `Missing features` and
+the pagination/sorting/search/filter/CSV/bulk-action-bar requirement stated
+for every list screen.
+
+### Verified manually
+
+- `npm test` — 234 passing.
+- A 26-check pass against the running server with seeded data: search,
+  breed/status/sex/lot filters, and sort all narrow correctly; CSV export
+  returns the exact filtered set with a verified BOM and semicolon
+  delimiter (confirmed via raw byte inspection after the fetch API's
+  automatic BOM-stripping produced a false negative in the first pass);
+  create rejects invalid input with 400 and field-level errors rather than
+  crashing; a full create → edit → delete round trip on a real record ends
+  with the id returning 404; a `gerente` account is blocked server-side
+  (403, not just a hidden button) from bulk delete; a `peão` account is
+  blocked server-side from the create form; and a Santa Clara manager
+  requesting a Boa Vista animal's id gets 404, not the record.
+- A browser-driven pass: selecting two rows shows the bulk bar with the exact
+  count; the confirm dialog opens with a message naming that count; Cancel
+  closes it with `returnValue: "cancel"` and does not submit; the weight
+  chart on a real animal's detail page initializes as a `line` chart with the
+  correct number of data points, no console errors.
+
+---
+
 ## Phase 7 — Design system, mobile navigation and accessibility (2026-08-03)
 
 Formalizes the design system, adds working mobile navigation, fixes a real
