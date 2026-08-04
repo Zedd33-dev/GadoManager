@@ -135,6 +135,73 @@ const SALE_EVENTS = [
 
 const DEATH_CAUSES = ['doenca', 'acidente', 'predador', 'desconhecida'];
 
+/**
+ * PROVISIONAL sanitary calendar - confirm against the thesis references.
+ *
+ * These are protocol *rows*, not rules in the code: they are seeded so the
+ * Vacinas, Tratamentos and carência screens have something to show, and are
+ * fully editable through `/protocolos` without touching source.
+ *
+ * The list deliberately omits febre aftosa. Brazil was recognised free of
+ * foot-and-mouth disease *without vaccination* in 2025, so a routine aftosa
+ * campaign in a 2026 dataset would be an anachronism an examiner could catch.
+ * What remains is brucelose (mandatory for females aged 3-8 months),
+ * clostridioses, raiva, and vermifugação as a treatment.
+ *
+ * The withdrawal periods are plausible label values, not measurements.
+ */
+const HEALTH_PROTOCOLS = [
+  {
+    name: 'Brucelose (B19)',
+    kind: 'vacina',
+    product: 'Vacina B19',
+    dose: 2,
+    doseUnit: 'ml',
+    withdrawalDays: 0,
+    scheduleMode: 'por_idade',
+    ageDays: 120,
+    intervalDays: null,
+    // Legally restricted to females in the 3-8 month window.
+    appliesTo: (spec) => spec.sex === 'F',
+  },
+  {
+    name: 'Clostridioses (polivalente)',
+    kind: 'vacina',
+    product: 'Vacina polivalente',
+    dose: 5,
+    doseUnit: 'ml',
+    withdrawalDays: 21,
+    scheduleMode: 'por_idade',
+    ageDays: 150,
+    intervalDays: 30,
+    appliesTo: () => true,
+  },
+  {
+    name: 'Raiva dos herbívoros',
+    kind: 'vacina',
+    product: 'Vacina antirrábica',
+    dose: 2,
+    doseUnit: 'ml',
+    withdrawalDays: 0,
+    scheduleMode: 'por_idade',
+    ageDays: 240,
+    intervalDays: null,
+    appliesTo: () => true,
+  },
+  {
+    name: 'Vermifugação',
+    kind: 'tratamento',
+    product: 'Ivermectina 1%',
+    dose: 5,
+    doseUnit: 'ml',
+    withdrawalDays: 35,
+    scheduleMode: 'por_idade',
+    ageDays: 210,
+    intervalDays: 180,
+    appliesTo: () => true,
+  },
+];
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -667,6 +734,104 @@ function insertCosts(db, farmIds, lotIds, userIds) {
   return total;
 }
 
+/**
+ * Seeds the provisional protocols and the doses they schedule.
+ *
+ * Doses are generated from each animal's own birth date, exactly as
+ * `/protocolos/:id/agendar` would - so the demo data is what the application
+ * itself produces, not a parallel fiction.
+ *
+ * Whether a due dose was actually applied is decided per animal, leaving a
+ * realistic tail of genuinely overdue doses (the dashboard's alert panel needs
+ * a real population) and some applied recently enough to still be in carência,
+ * so that rule is visible too.
+ */
+function insertHealthEvents(db, specs, farmIds, userIds) {
+  const protocolStatement = db.prepare(
+    `INSERT INTO health_protocols
+       (farm_id, name, kind, product, dose, dose_unit, withdrawal_days,
+        schedule_mode, age_days, interval_days, active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+  );
+
+  const eventStatement = db.prepare(
+    `INSERT INTO health_events
+       (animal_id, protocol_id, kind, name, product, dose, dose_unit,
+        scheduled_date, applied_date, applicator_user_id, withdrawal_days,
+        batch_number, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  const applicators = [userIds['peao@boavista.com.br'], userIds['gerente@boavista.com.br']];
+
+  // Each farm keeps its own copy of the calendar, since protocols are
+  // farm-scoped like every other record.
+  const protocolIdsByFarm = {};
+  for (const farmKey of Object.keys(farmIds)) {
+    protocolIdsByFarm[farmKey] = HEALTH_PROTOCOLS.map((protocol) =>
+      Number(
+        protocolStatement.run(
+          farmIds[farmKey], protocol.name, protocol.kind, protocol.product,
+          protocol.dose, protocol.doseUnit, protocol.withdrawalDays,
+          protocol.scheduleMode, protocol.ageDays, protocol.intervalDays,
+          NOW_TIMESTAMP, NOW_TIMESTAMP,
+        ).lastInsertRowid,
+      ),
+    );
+  }
+
+  let scheduled = 0;
+  let applied = 0;
+
+  for (const spec of specs) {
+    const lastDate = spec.exitDate ?? TODAY;
+
+    HEALTH_PROTOCOLS.forEach((protocol, index) => {
+      if (!protocol.appliesTo(spec)) return;
+
+      const doses = [addDays(spec.birthDate, protocol.ageDays)];
+      if (protocol.intervalDays) doses.push(addDays(doses[0], protocol.intervalDays));
+
+      for (const scheduledDate of doses) {
+        // A dose the animal has not yet reached the age for, or one falling
+        // after it left the herd, was never scheduled in the first place.
+        if (scheduledDate > TODAY || scheduledDate > lastDate) continue;
+        if (scheduledDate < SIMULATION_START) continue;
+
+        // Most due doses get applied; the rest become the overdue tail.
+        const wasApplied = gen.chance(0.82);
+        const appliedDate = wasApplied
+          ? addDays(scheduledDate, gen.int(0, 6))
+          : null;
+
+        if (appliedDate && appliedDate > TODAY) continue;
+
+        eventStatement.run(
+          spec.id,
+          protocolIdsByFarm[spec.farmKey][index],
+          protocol.kind,
+          protocol.name,
+          protocol.product,
+          protocol.dose,
+          protocol.doseUnit,
+          scheduledDate,
+          appliedDate,
+          appliedDate ? gen.pick(applicators) : null,
+          protocol.withdrawalDays,
+          appliedDate ? `L${gen.int(1000, 9999)}` : null,
+          NOW_TIMESTAMP,
+          NOW_TIMESTAMP,
+        );
+
+        scheduled += 1;
+        if (appliedDate) applied += 1;
+      }
+    });
+  }
+
+  return { protocols: HEALTH_PROTOCOLS.length * Object.keys(farmIds).length, scheduled, applied };
+}
+
 function insertReminders(db, farmIds, userIds) {
   const statement = db.prepare(
     `INSERT INTO reminders
@@ -753,6 +918,7 @@ async function main() {
     const movementCount = insertMovements(db, specs, farmIds, lotIds, pastureIds, userIds);
     const costCount = insertCosts(db, farmIds, lotIds, userIds);
     const reminderCount = insertReminders(db, farmIds, userIds);
+    const health = insertHealthEvents(db, specs, farmIds, userIds);
 
     summary = {
       farms: FARMS.length,
@@ -767,6 +933,9 @@ async function main() {
       movements: movementCount,
       costs: costCount,
       reminders: reminderCount,
+      protocols: health.protocols,
+      healthScheduled: health.scheduled,
+      healthApplied: health.applied,
     };
   });
 
@@ -791,13 +960,20 @@ async function main() {
     console.log(`  Movimentações ....... ${summary.movements}`);
     console.log(`  Custos .............. ${summary.costs}`);
     console.log(`  Lembretes ........... ${summary.reminders}`);
+    console.log(`  Protocolos .......... ${summary.protocols}`);
+    console.log(`  Doses agendadas ..... ${summary.healthScheduled}`);
+    console.log(`    aplicadas ......... ${summary.healthApplied}`);
+    console.log(`    atrasadas ......... ${counts("SELECT COUNT(*) c FROM health_events he JOIN animals a ON a.id=he.animal_id WHERE he.applied_date IS NULL AND a.status='ativo'")}`);
 
     console.log('\nContas de demonstração (senha para todas: ' + DEMO_PASSWORD + '):');
     for (const user of USERS) {
       console.log(`  ${user.email.padEnd(32)} ${user.role.padEnd(8)} ${user.farms.join(', ')}`);
     }
 
-    console.log('\nNot seeded yet: vacinas e tratamentos (calendário sanitário pendente de confirmação).');
+    console.log(
+      '\nATENÇÃO: o calendário sanitário semeado é PROVISÓRIO. Os protocolos são\n' +
+        'dados editáveis em /protocolos — confirme-os com a bibliografia do TCC.',
+    );
   } finally {
     closeDb();
   }
