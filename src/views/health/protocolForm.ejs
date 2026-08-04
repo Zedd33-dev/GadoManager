@@ -1,0 +1,113 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Novo protocolo' : `Editar ${protocol.name}` %></h1>
+
+<form method="post" action="<%= isCreate ? '/protocolos' : `/protocolos/${protocol.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (isCreate && farms.length > 1) { %>
+    <div class="field">
+      <label for="farmId">Fazenda</label>
+      <select id="farmId" name="farmId" required>
+        <option value="">Selecione…</option>
+        <% farms.forEach(function (farm) { %>
+          <option value="<%= farm.id %>" <%= values.farmId == farm.id ? 'selected' : '' %>><%= farm.name %></option>
+        <% }); %>
+      </select>
+    </div>
+  <% } %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="name">Nome</label>
+      <input type="text" id="name" name="name" value="<%= values.name ?? '' %>" required maxlength="120"
+             aria-invalid="<%= errors.name ? 'true' : 'false' %>">
+      <% if (errors.name) { %><p class="field-error"><%= errors.name %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="kind">Tipo</label>
+      <select id="kind" name="kind" required>
+        <option value="vacina" <%= values.kind === 'vacina' ? 'selected' : '' %>>Vacina</option>
+        <option value="tratamento" <%= values.kind === 'tratamento' ? 'selected' : '' %>>Tratamento</option>
+      </select>
+      <% if (errors.kind) { %><p class="field-error"><%= errors.kind %></p><% } %>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="product">Produto (opcional)</label>
+      <input type="text" id="product" name="product" value="<%= values.product ?? '' %>">
+    </div>
+    <div class="field">
+      <label for="dose">Dose (opcional)</label>
+      <input type="text" inputmode="decimal" id="dose" name="dose" value="<%= values.dose ?? '' %>" placeholder="5">
+      <% if (errors.dose) { %><p class="field-error"><%= errors.dose %></p><% } %>
+    </div>
+    <div class="field">
+      <label for="doseUnit">Unidade (opcional)</label>
+      <input type="text" id="doseUnit" name="doseUnit" value="<%= values.doseUnit ?? '' %>" placeholder="ml">
+    </div>
+  </div>
+
+  <fieldset class="field-group">
+    <legend>Agendamento</legend>
+
+    <div class="field">
+      <label for="scheduleMode">Modo</label>
+      <select id="scheduleMode" name="scheduleMode" required>
+        <option value="por_idade" <%= values.scheduleMode === 'por_idade' ? 'selected' : '' %>>
+          Por idade do animal
+        </option>
+        <option value="por_data" <%= values.scheduleMode === 'por_data' ? 'selected' : '' %>>
+          Por data escolhida no agendamento
+        </option>
+      </select>
+      <% if (errors.scheduleMode) { %><p class="field-error"><%= errors.scheduleMode %></p><% } %>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="ageDays">Idade de aplicação em dias (se por idade)</label>
+        <input type="number" id="ageDays" name="ageDays" min="0" value="<%= values.ageDays ?? '' %>">
+        <% if (errors.ageDays) { %><p class="field-error"><%= errors.ageDays %></p><% } %>
+        <p class="hint">Ex.: 90 para uma dose aos três meses de idade.</p>
+      </div>
+
+      <div class="field">
+        <label for="intervalDays">Reforço em dias (opcional)</label>
+        <input type="number" id="intervalDays" name="intervalDays" min="1" value="<%= values.intervalDays ?? '' %>">
+        <% if (errors.intervalDays) { %><p class="field-error"><%= errors.intervalDays %></p><% } %>
+        <p class="hint">Agenda uma segunda dose este número de dias após a primeira.</p>
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="field">
+    <label for="withdrawalDays">Período de carência em dias</label>
+    <input type="number" id="withdrawalDays" name="withdrawalDays" min="0"
+           value="<%= values.withdrawalDays ?? 0 %>">
+    <% if (errors.withdrawalDays) { %><p class="field-error"><%= errors.withdrawalDays %></p><% } %>
+    <p class="hint">
+      Dias após a aplicação em que o animal não pode ser abatido. Zero significa
+      sem carência. O valor é copiado para cada dose no momento do agendamento,
+      para que uma edição futura deste protocolo não altere uma carência já cumprida.
+    </p>
+  </div>
+
+  <div class="field field--confirm">
+    <label>
+      <input type="checkbox" name="active" <%= values.active === 'on' ? 'checked' : '' %>>
+      Protocolo ativo
+    </label>
+  </div>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Cadastrar' : 'Salvar alterações' %></button>
+  <a href="/protocolos" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

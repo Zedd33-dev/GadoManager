@@ -1,0 +1,79 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Protocolos sanitários</h1>
+<p class="lead">
+  Modelos que agendam doses automaticamente, por idade do animal ou por data.
+</p>
+
+<div class="list-toolbar">
+  <% if (userCan('protocols:write')) { %>
+    <a href="/protocolos/novo" class="button button--primary">Novo protocolo</a>
+  <% } %>
+</div>
+
+<% if (protocols.length === 0) { %>
+  <p class="empty-state">
+    Nenhum protocolo cadastrado.
+    <% if (userCan('protocols:write')) { %> — <a href="/protocolos/novo">cadastrar protocolo</a>.<% } %>
+  </p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Protocolos sanitários</caption>
+      <thead>
+        <tr>
+          <th scope="col">Protocolo</th>
+          <th scope="col">Tipo</th>
+          <th scope="col">Agendamento</th>
+          <th scope="col">Reforço</th>
+          <th scope="col">Carência</th>
+          <th scope="col">Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% protocols.forEach(function (p) { %>
+          <tr>
+            <th scope="row">
+              <%= p.name %>
+              <% if (!p.active) { %><span class="badge badge--warning">Inativo</span><% } %>
+              <span class="hint"><%= p.product ?? 'sem produto informado' %> · <%= p.farm_name %></span>
+            </th>
+            <td data-label="Tipo">
+              <span class="badge badge--<%= p.kind === 'vacina' ? 'info' : 'warning' %>">
+                <%= p.kind === 'vacina' ? 'Vacina' : 'Tratamento' %>
+              </span>
+            </td>
+            <td data-label="Agendamento">
+              <% if (p.schedule_mode === 'por_idade') { %>
+                Aos <%= p.age_days %> dias de idade
+              <% } else { %>
+                Por data escolhida
+              <% } %>
+            </td>
+            <td data-label="Reforço"><%= p.interval_days ? p.interval_days + ' dias depois' : '—' %></td>
+            <td data-label="Carência"><%= p.withdrawal_days > 0 ? p.withdrawal_days + ' dias' : '—' %></td>
+            <td data-label="Ações">
+              <% if (userCan('health:schedule') && p.active) { %>
+                <a href="/protocolos/<%= p.id %>/agendar">Agendar</a>
+              <% } %>
+              <% if (userCan('protocols:write')) { %>
+                <a href="/protocolos/<%= p.id %>/editar">Editar</a>
+              <% } %>
+            </td>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="hint">
+    Um protocolo agendado <strong>por idade</strong> calcula a data a partir do
+    nascimento de cada animal, então o mesmo protocolo aplicado a um lote inteiro
+    gera uma data diferente por animal — que é justamente o objetivo.
+  </p>
+<% } %>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

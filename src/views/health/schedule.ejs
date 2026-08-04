@@ -1,0 +1,91 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Agendar protocolo</h1>
+<p class="lead">
+  <strong><%= protocol.name %></strong> —
+  <%= protocol.kind === 'vacina' ? 'vacina' : 'tratamento' %>
+  <% if (protocol.schedule_mode === 'por_idade') { %>
+    · aplicação aos <%= protocol.age_days %> dias de idade
+  <% } %>
+  <% if (protocol.withdrawal_days > 0) { %>
+    · carência de <%= protocol.withdrawal_days %> dias
+  <% } %>
+</p>
+
+<% if (protocol.schedule_mode === 'por_idade') { %>
+  <p class="hint">
+    A data de cada dose é calculada a partir do nascimento do próprio animal,
+    então animais de idades diferentes recebem datas diferentes. Animais que já
+    passaram dessa idade recebem uma data no passado — a dose realmente está
+    atrasada, e mover a data para hoje esconderia essa lacuna.
+  </p>
+<% } %>
+
+<form method="post" action="/protocolos/<%= protocol.id %>/agendar" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (protocol.schedule_mode === 'por_data') { %>
+    <div class="field">
+      <label for="baseDate">Data prevista de aplicação</label>
+      <input type="date" id="baseDate" name="baseDate" value="<%= values.baseDate ?? '' %>" required
+             aria-invalid="<%= errors.baseDate ? 'true' : 'false' %>">
+      <% if (errors.baseDate) { %><p class="field-error"><%= errors.baseDate %></p><% } %>
+    </div>
+  <% } %>
+
+  <% if (errors.animals) { %>
+    <p class="field-error"><%= errors.animals %></p>
+  <% } %>
+
+  <% if (animals.length === 0) { %>
+    <p class="empty-state">Nenhum animal ativo disponível nesta fazenda.</p>
+  <% } else { %>
+    <fieldset class="field-group">
+      <legend>Animais (<%= animals.length %> disponíveis)</legend>
+
+      <p>
+        <label>
+          <input type="checkbox" class="select-all" aria-label="Selecionar todos os animais">
+          Selecionar todos
+        </label>
+      </p>
+
+      <div class="table-scroll animal-picker">
+        <table class="table">
+          <caption class="visually-hidden">Animais disponíveis para agendamento</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">Selecionar</span></th>
+              <th scope="col">Brinco</th>
+              <th scope="col">Lote</th>
+              <th scope="col">Pasto</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% animals.forEach(function (animal) { %>
+              <tr>
+                <td>
+                  <input type="checkbox" name="animalIds" value="<%= animal.id %>"
+                         class="row-select" aria-label="Selecionar <%= animal.ear_tag %>">
+                </td>
+                <th scope="row"><%= animal.ear_tag %></th>
+                <td><%= animal.lot_name ?? '—' %></td>
+                <td><%= animal.pasture_name ?? '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </fieldset>
+
+    <button type="submit" class="button button--primary">Agendar doses</button>
+  <% } %>
+
+  <a href="/protocolos" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/selectAll.js" defer></script>
+
+<%- include('../partials/foot') %>

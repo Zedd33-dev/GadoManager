@@ -1,24 +1,13 @@
 <%- include('../partials/head') %>
 <%- include('../partials/nav') %>
 
-<h1>Pesagens</h1>
-<p class="lead"><%= fmt.formatNumber(pageInfo.totalRows) %> pesagem(ns) registrada(s).</p>
+<h1>Movimentações</h1>
+<p class="lead"><%= fmt.formatNumber(pageInfo.totalRows) %> movimentação(ões) registrada(s).</p>
 
-<form method="get" action="/pesagens" class="filter-bar" aria-label="Filtros de pesagens">
+<form method="get" action="/movimentacoes" class="filter-bar" aria-label="Filtros">
   <div class="filter-field filter-field--grow">
     <label for="q">Buscar por brinco</label>
     <input type="search" id="q" name="q" value="<%= filters.search ?? '' %>">
-  </div>
-  <div class="filter-field">
-    <label for="lote">Lote</label>
-    <select id="lote" name="lote">
-      <option value="">Todos</option>
-      <% lots.forEach(function (lot) { %>
-        <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
-          <%= lot.name %> — <%= lot.farm_name %>
-        </option>
-      <% }); %>
-    </select>
   </div>
   <div class="filter-field">
     <label for="de">De</label>
@@ -32,54 +21,57 @@
 </form>
 
 <div class="list-toolbar">
-  <% if (userCan('weighings:write')) { %>
-    <a href="/pesagens/lote" class="button button--primary">Pesagem em lote</a>
+  <% if (userCan('movements:write')) { %>
+    <a href="/movimentacoes/nova" class="button button--primary">Nova movimentação</a>
   <% } %>
-  <a href="/pesagens/exportar.csv?<%= csvQuery %>" class="button">Exportar CSV</a>
+  <a href="/movimentacoes/exportar.csv?<%= csvQuery %>" class="button">Exportar CSV</a>
 </div>
 
 <% if (rows.length === 0) { %>
   <p class="empty-state">
-    Nenhuma pesagem encontrada com os filtros atuais.
-    <% if (userCan('weighings:write')) { %>
-      — <a href="/pesagens/lote">registrar pesagem</a>.
+    Nenhuma movimentação encontrada.
+    <% if (userCan('movements:write')) { %>
+      — <a href="/movimentacoes/nova">registrar movimentação</a>.
     <% } %>
   </p>
 <% } else { %>
   <div class="table-scroll">
     <table class="table table--responsive">
-      <caption class="visually-hidden">Lista de pesagens</caption>
+      <caption class="visually-hidden">Histórico de movimentações</caption>
       <thead>
         <tr>
-          <% [['weighDate','Data'],['earTag','Brinco'],['lot','Lote'],['weight','Peso']].forEach(function (col) { %>
+          <% [['movedAt','Data'],['earTag','Brinco']].forEach(function (col) { %>
             <th scope="col">
               <a href="?<%= buildSortQuery(col[0]) %>" class="sort-link <%= sort.key === col[0] ? 'sort-link--active' : '' %>">
                 <%= col[1] %><% if (sort.key === col[0]) { %> <%= sort.direction === 'asc' ? '▲' : '▼' %><% } %>
               </a>
             </th>
           <% }); %>
-          <th scope="col">Desde a anterior</th>
-          <th scope="col">GMD</th>
+          <th scope="col">Origem</th>
+          <th scope="col">Destino</th>
+          <th scope="col">Motivo</th>
         </tr>
       </thead>
       <tbody>
         <% rows.forEach(function (row) { %>
           <tr>
-            <th scope="row"><%= fmt.formatDate(row.weigh_date) %></th>
+            <th scope="row"><%= fmt.formatDate(row.moved_at.slice(0, 10)) %></th>
             <td data-label="Brinco"><a href="/animais/<%= row.animal_id %>"><%= row.ear_tag %></a></td>
-            <td data-label="Lote"><%= row.lot_name ?? '—' %></td>
-            <td data-label="Peso"><%= fmt.formatWeight(row.weight_kg) %></td>
-            <td data-label="Desde a anterior">
-              <% if (row.prev_kg === null) { %>
-                <span class="hint">Primeira pesagem</span>
-              <% } else {
-                   const delta = row.weight_kg - row.prev_kg; %>
-                <span class="<%= delta < 0 ? 'delta delta--negative' : 'delta delta--positive' %>">
-                  <%= delta >= 0 ? '+' : '' %><%= fmt.formatNumber(delta, 1) %> kg
-                </span>
+            <td data-label="Origem">
+              <%= row.from_lot ?? '—' %>
+              <% if (row.from_pasture) { %><span class="hint"><%= row.from_pasture %></span><% } %>
+              <% if (row.from_farm !== row.to_farm) { %>
+                <span class="badge badge--warning"><%= row.from_farm %></span>
               <% } %>
             </td>
-            <td data-label="GMD"><%= fmt.formatGmd(row.gmd) %></td>
+            <td data-label="Destino">
+              <%= row.to_lot ?? '—' %>
+              <% if (row.to_pasture) { %><span class="hint"><%= row.to_pasture %></span><% } %>
+              <% if (row.from_farm !== row.to_farm) { %>
+                <span class="badge badge--info"><%= row.to_farm %></span>
+              <% } %>
+            </td>
+            <td data-label="Motivo"><%= row.reason ?? '—' %></td>
           </tr>
         <% }); %>
       </tbody>

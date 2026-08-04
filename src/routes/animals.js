@@ -38,6 +38,8 @@ import { listInScope as listLotsInScope } from '../repositories/lotRepository.js
 import { listInScope as listPasturesInScope } from '../repositories/pastureRepository.js';
 import { listInScope as listFarmsInScope } from '../repositories/farmRepository.js';
 import { parseAnimalListQuery, validateAnimalInput } from '../services/animalService.js';
+import { evaluateWithdrawal } from '../services/healthService.js';
+import { listAppliedWithWithdrawal } from '../repositories/healthRepository.js';
 import {
   ANIMAL_STATUS,
   ANIMAL_STATUS_LABELS,
@@ -211,6 +213,7 @@ router.get('/animais/:id', requireCapability('animals:read'), (req, res, next) =
 
   const timeline = getTimeline(db, animalId);
   const weightHistory = getWeightHistory(db, animalId);
+  const withdrawal = evaluateWithdrawal(listAppliedWithWithdrawal(db, animalId));
 
   const weightChart = {
     labels: weightHistory.map((w) => w.date),
@@ -220,6 +223,7 @@ router.get('/animais/:id', requireCapability('animals:read'), (req, res, next) =
   res.render('animals/show', {
     title: animal.ear_tag,
     animal,
+    withdrawal,
     timeline,
     weightChart,
     weightChartJson: toEmbeddableJson(weightChart),

@@ -1,0 +1,122 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Nova movimentação</h1>
+<p class="lead">
+  Transferir animais entre lotes, pastos ou fazendas. O histórico e a
+  localização atual são gravados juntos, em uma única transação.
+</p>
+
+<% if (errors.destination) { %>
+  <div class="alert alert--danger" role="alert"><%= errors.destination %></div>
+<% } %>
+
+<form method="post" action="/movimentacoes" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="movedAt">Data da movimentação</label>
+      <input type="date" id="movedAt" name="movedAt" value="<%= values.movedAt ?? '' %>"
+             max="<%= today %>" required aria-invalid="<%= errors.movedAt ? 'true' : 'false' %>">
+      <% if (errors.movedAt) { %><p class="field-error"><%= errors.movedAt %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="reason">Motivo (opcional)</label>
+      <input type="text" id="reason" name="reason" value="<%= values.reason ?? '' %>"
+             placeholder="Ex.: rodízio de pastagem">
+    </div>
+  </div>
+
+  <fieldset class="field-group">
+    <legend>Destino</legend>
+    <p class="hint">
+      Deixe em branco o que não deve mudar — mover entre pastos sem informar
+      lote mantém o lote atual de cada animal.
+    </p>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="toLotId">Lote de destino</label>
+        <select id="toLotId" name="toLotId">
+          <option value="">Manter o lote atual</option>
+          <% lots.forEach(function (lot) { %>
+            <option value="<%= lot.id %>" <%= values.toLotId == lot.id ? 'selected' : '' %>>
+              <%= lot.name %> — <%= lot.farm_name %>
+            </option>
+          <% }); %>
+        </select>
+        <% if (errors.toLotId) { %><p class="field-error"><%= errors.toLotId %></p><% } %>
+      </div>
+
+      <div class="field">
+        <label for="toPastureId">Pasto de destino</label>
+        <select id="toPastureId" name="toPastureId">
+          <option value="">Manter o pasto atual</option>
+          <% pastures.forEach(function (pasture) { %>
+            <option value="<%= pasture.id %>" <%= values.toPastureId == pasture.id ? 'selected' : '' %>>
+              <%= pasture.name %> — <%= pasture.farm_name %>
+            </option>
+          <% }); %>
+        </select>
+        <% if (errors.toPastureId) { %><p class="field-error"><%= errors.toPastureId %></p><% } %>
+      </div>
+    </div>
+  </fieldset>
+
+  <% if (errors.animals) { %>
+    <p class="field-error"><%= errors.animals %></p>
+  <% } %>
+
+  <% if (animals.length === 0) { %>
+    <p class="empty-state">Nenhum animal ativo disponível para movimentar.</p>
+  <% } else { %>
+    <fieldset class="field-group">
+      <legend>Animais (<%= animals.length %> disponíveis)</legend>
+
+      <p>
+        <label>
+          <input type="checkbox" class="select-all" aria-label="Selecionar todos os animais">
+          Selecionar todos
+        </label>
+      </p>
+
+      <div class="table-scroll animal-picker">
+        <table class="table">
+          <caption class="visually-hidden">Animais disponíveis para movimentação</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">Selecionar</span></th>
+              <th scope="col">Brinco</th>
+              <th scope="col">Lote atual</th>
+              <th scope="col">Pasto atual</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% animals.forEach(function (animal) { %>
+              <tr>
+                <td>
+                  <input type="checkbox" name="animalIds" value="<%= animal.id %>"
+                         class="row-select" aria-label="Selecionar <%= animal.ear_tag %>">
+                </td>
+                <th scope="row"><%= animal.ear_tag %></th>
+                <td><%= animal.lot_name ?? '—' %></td>
+                <td><%= animal.pasture_name ?? '—' %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+    </fieldset>
+
+    <button type="submit" class="button button--primary">Registrar movimentação</button>
+  <% } %>
+
+  <a href="/movimentacoes" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/selectAll.js" defer></script>
+
+<%- include('../partials/foot') %>

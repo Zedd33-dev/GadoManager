@@ -1,0 +1,129 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= module.title %></h1>
+<p class="lead"><%= fmt.formatNumber(pageInfo.totalRows) %> registro(s).</p>
+
+<ul class="status-chips">
+  <% [['', 'Todos'], ['atrasada', 'Atrasadas'], ['a-vencer', 'A vencer'], ['aplicada', 'Aplicadas']].forEach(function (opt) { %>
+    <li>
+      <a class="chip <%= (filters.status ?? '') === opt[0] ? 'chip--active' : '' %>"
+         href="?<%= buildStatusQuery(opt[0]) %>"><%= opt[1] %></a>
+    </li>
+  <% }); %>
+</ul>
+
+<form method="get" action="/<%= moduleKey %>" class="filter-bar" aria-label="Filtros">
+  <div class="filter-field filter-field--grow">
+    <label for="q">Buscar por brinco</label>
+    <input type="search" id="q" name="q" value="<%= filters.search ?? '' %>">
+  </div>
+  <div class="filter-field">
+    <label for="lote">Lote</label>
+    <select id="lote" name="lote">
+      <option value="">Todos</option>
+      <% lots.forEach(function (lot) { %>
+        <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
+          <%= lot.name %> — <%= lot.farm_name %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+  <input type="hidden" name="status" value="<%= filters.status ?? '' %>">
+  <button type="submit" class="button button--primary filter-submit">Filtrar</button>
+</form>
+
+<div class="list-toolbar">
+  <% if (userCan('health:schedule')) { %>
+    <a href="/protocolos" class="button button--primary">Protocolos sanitários</a>
+  <% } %>
+  <a href="/<%= moduleKey %>/exportar.csv?<%= csvQuery %>" class="button">Exportar CSV</a>
+</div>
+
+<% if (rows.length === 0) { %>
+  <p class="empty-state">
+    Nenhum registro encontrado com os filtros atuais.
+    <% if (userCan('health:schedule')) { %>
+      — agende doses a partir de um <a href="/protocolos">protocolo</a>.
+    <% } %>
+  </p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Lista de <%= module.title %></caption>
+      <thead>
+        <tr>
+          <% [['earTag','Brinco'],['name','Nome'],['scheduledDate','Prevista'],['appliedDate','Aplicada']].forEach(function (col) { %>
+            <th scope="col">
+              <a href="?<%= buildSortQuery(col[0]) %>" class="sort-link <%= sort.key === col[0] ? 'sort-link--active' : '' %>">
+                <%= col[1] %><% if (sort.key === col[0]) { %> <%= sort.direction === 'asc' ? '▲' : '▼' %><% } %>
+              </a>
+            </th>
+          <% }); %>
+          <th scope="col">Carência</th>
+          <th scope="col">Situação</th>
+          <% if (userCan('health:apply')) { %><th scope="col">Ações</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <th scope="row"><a href="/animais/<%= row.animal_id %>"><%= row.ear_tag %></a></th>
+            <td data-label="Nome">
+              <%= row.name %>
+              <% if (row.product) { %><span class="hint"><%= row.product %></span><% } %>
+            </td>
+            <td data-label="Prevista"><%= fmt.formatDate(row.scheduled_date) %></td>
+            <td data-label="Aplicada"><%= fmt.formatDate(row.applied_date) %></td>
+            <td data-label="Carência">
+              <%= row.withdrawal_days > 0 ? row.withdrawal_days + ' dias' : '—' %>
+            </td>
+            <td data-label="Situação">
+              <span class="badge badge--<%= statusVariants[row.statusKey] %>">
+                <%= statusLabels[row.statusKey] %>
+              </span>
+              <% if (row.animal_status !== 'ativo') { %>
+                <span class="hint">Animal <%= row.animal_status %></span>
+              <% } %>
+            </td>
+            <% if (userCan('health:apply')) { %>
+              <td data-label="Ações">
+                <% if (!row.applied_date && row.animal_status === 'ativo') { %>
+                  <a href="/sanidade/<%= row.id %>/aplicar">Aplicar</a>
+                <% } else { %>
+                  —
+                <% } %>
+              </td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" aria-label="Paginação">
+    <p class="pagination__summary">
+      Mostrando <%= fmt.formatNumber(pageInfo.rangeStart) %>–<%= fmt.formatNumber(pageInfo.rangeEnd) %>
+      de <%= fmt.formatNumber(pageInfo.totalRows) %>
+    </p>
+    <div class="pagination__controls">
+      <a class="button <%= pageInfo.hasPrevious ? '' : 'is-disabled' %>"
+         href="?<%= buildPageQuery(pageInfo.page - 1) %>"
+         aria-disabled="<%= pageInfo.hasPrevious ? 'false' : 'true' %>">Anterior</a>
+      <span class="pagination__page">Página <%= pageInfo.page %> de <%= pageInfo.totalPages %></span>
+      <a class="button <%= pageInfo.hasNext ? '' : 'is-disabled' %>"
+         href="?<%= buildPageQuery(pageInfo.page + 1) %>"
+         aria-disabled="<%= pageInfo.hasNext ? 'false' : 'true' %>">Próxima</a>
+    </div>
+  </nav>
+<% } %>
+
+<p class="hint">
+  Uma dose está <strong>atrasada</strong> quando a data prevista já passou, ela
+  ainda não foi aplicada e o animal continua ativo. Animais vendidos, mortos ou
+  transferidos nunca geram alerta.
+</p>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

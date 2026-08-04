@@ -1,0 +1,64 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Registrar aplicação</h1>
+<p class="lead">
+  <strong><%= event.name %></strong> — animal <a href="/animais/<%= event.animal_id %>"><%= event.ear_tag %></a>
+</p>
+
+<% if (event.withdrawal_days > 0) { %>
+  <div class="alert alert--warning" role="alert">
+    <strong>Carência de <%= event.withdrawal_days %> dia(s).</strong>
+    Após a aplicação, este animal não poderá ser abatido até o fim do período.
+  </div>
+<% } %>
+
+<form method="post" action="/sanidade/<%= event.id %>/aplicar" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <table class="table table--responsive">
+    <caption class="visually-hidden">Dados da dose agendada</caption>
+    <tbody>
+      <tr><th scope="row">Tipo</th><td data-label="Tipo"><%= event.kind === 'vacina' ? 'Vacina' : 'Tratamento' %></td></tr>
+      <tr><th scope="row">Produto</th><td data-label="Produto"><%= event.product ?? '—' %></td></tr>
+      <tr>
+        <th scope="row">Dose</th>
+        <td data-label="Dose">
+          <%= event.dose !== null ? fmt.formatNumber(event.dose, 1) + ' ' + (event.dose_unit ?? '') : '—' %>
+        </td>
+      </tr>
+      <tr><th scope="row">Prevista para</th><td data-label="Prevista para"><%= fmt.formatDate(event.scheduled_date) %></td></tr>
+    </tbody>
+  </table>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="appliedDate">Data da aplicação</label>
+      <input type="date" id="appliedDate" name="appliedDate"
+             value="<%= values.appliedDate ?? '' %>" max="<%= today %>" required
+             aria-invalid="<%= errors.appliedDate ? 'true' : 'false' %>">
+      <% if (errors.appliedDate) { %><p class="field-error"><%= errors.appliedDate %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="batchNumber">Lote do produto (opcional)</label>
+      <input type="text" id="batchNumber" name="batchNumber" value="<%= values.batchNumber ?? '' %>">
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="notes">Observações (opcional)</label>
+    <textarea id="notes" name="notes" rows="2" maxlength="500"><%= values.notes ?? '' %></textarea>
+  </div>
+
+  <p class="hint">
+    O aplicador registrado será a sua conta (<%= currentUser.name %>).
+  </p>
+
+  <button type="submit" class="button button--primary">Registrar aplicação</button>
+  <a href="/<%= event.kind === 'vacina' ? 'vacinas' : 'tratamentos' %>" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

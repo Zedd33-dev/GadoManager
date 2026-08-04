@@ -28,6 +28,14 @@
   </div>
 </header>
 
+<% if (withdrawal.isUnderWithdrawal) { %>
+  <div class="alert alert--warning" role="alert">
+    <strong>Animal em carência até <%= fmt.formatDate(withdrawal.releaseDate) %></strong>
+    (<%= withdrawal.daysRemaining %> dia(s) restante(s), por <%= withdrawal.blockingEventName %>).
+    Não pode ser abatido antes dessa data.
+  </div>
+<% } %>
+
 <div class="detail-grid">
 
   <article class="chart-card">

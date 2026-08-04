@@ -28,11 +28,14 @@ import { parseMultipartBody } from './middleware/upload.js';
 import { resolveTenantScope, requireFarmAccess } from './middleware/tenant.js';
 import * as format from './lib/format.js';
 import authRoutes from './routes/auth.js';
-import healthRoutes from './routes/health.js';
+// The liveness probe, distinct from the sanitary module in routes/health.js.
+import healthcheckRoutes from './routes/healthcheck.js';
 import homeRoutes from './routes/home.js';
 import animalRoutes from './routes/animals.js';
 import weighingRoutes from './routes/weighings.js';
 import structureRoutes from './routes/structure.js';
+import healthRoutes from './routes/health.js';
+import movementRoutes from './routes/movements.js';
 
 export function createApp() {
   const app = express();
@@ -126,7 +129,7 @@ export function createApp() {
   });
 
   // Public routes.
-  app.use('/', healthRoutes);
+  app.use('/', healthcheckRoutes);
   app.use('/', authRoutes);
 
   // Everything past this point requires a session.
@@ -136,6 +139,8 @@ export function createApp() {
   app.use('/', animalRoutes);
   app.use('/', weighingRoutes);
   app.use('/', structureRoutes);
+  app.use('/', healthRoutes);
+  app.use('/', movementRoutes);
 
   // Error handling, always last.
   app.use(notFoundHandler);
