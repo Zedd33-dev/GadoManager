@@ -1,0 +1,168 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Novo animal' : `Editar ${animal.ear_tag}` %></h1>
+
+<% if (Object.keys(errors).length > 0) { %>
+  <div class="alert alert--danger" role="alert">
+    Corrija os campos indicados abaixo antes de continuar.
+  </div>
+<% } %>
+
+<form method="post" action="<%= isCreate ? '/animais' : `/animais/${animal.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (isCreate && farms.length > 1) { %>
+    <div class="field">
+      <label for="farmId">Fazenda</label>
+      <select id="farmId" name="farmId" required>
+        <option value="">Selecione…</option>
+        <% farms.forEach(function (farm) { %>
+          <option value="<%= farm.id %>" <%= values.farmId == farm.id ? 'selected' : '' %>><%= farm.name %></option>
+        <% }); %>
+      </select>
+    </div>
+  <% } else if (!isCreate) { %>
+    <p class="hint">Fazenda: <strong><%= animal.farm_name %></strong> (não pode ser alterada aqui)</p>
+  <% } %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="earTag">Brinco</label>
+      <input
+        type="text" id="earTag" name="earTag" value="<%= values.earTag ?? '' %>"
+        required maxlength="40" aria-invalid="<%= errors.earTag ? 'true' : 'false' %>"
+        <% if (errors.earTag) { %>aria-describedby="err-earTag"<% } %>
+      >
+      <% if (errors.earTag) { %><p class="field-error" id="err-earTag"><%= errors.earTag %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="sisbov">SISBOV (opcional)</label>
+      <input type="text" id="sisbov" name="sisbov" value="<%= values.sisbov ?? '' %>">
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="birthDate">Data de nascimento</label>
+      <input
+        type="date" id="birthDate" name="birthDate" value="<%= values.birthDate ?? '' %>"
+        required aria-invalid="<%= errors.birthDate ? 'true' : 'false' %>"
+        <% if (errors.birthDate) { %>aria-describedby="err-birthDate"<% } %>
+      >
+      <% if (errors.birthDate) { %><p class="field-error" id="err-birthDate"><%= errors.birthDate %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="sex">Sexo</label>
+      <select id="sex" name="sex" required aria-invalid="<%= errors.sex ? 'true' : 'false' %>">
+        <option value="">Selecione…</option>
+        <option value="M" <%= values.sex === 'M' ? 'selected' : '' %>>Macho</option>
+        <option value="F" <%= values.sex === 'F' ? 'selected' : '' %>>Fêmea</option>
+      </select>
+      <% if (errors.sex) { %><p class="field-error"><%= errors.sex %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="breed">Raça</label>
+      <select id="breed" name="breed" required aria-invalid="<%= errors.breed ? 'true' : 'false' %>">
+        <option value="">Selecione…</option>
+        <% breeds.forEach(function (b) { %>
+          <option value="<%= b %>" <%= values.breed === b ? 'selected' : '' %>><%= breedLabels[b] %></option>
+        <% }); %>
+      </select>
+      <% if (errors.breed) { %><p class="field-error"><%= errors.breed %></p><% } %>
+    </div>
+  </div>
+
+  <fieldset class="field-group">
+    <legend>Origem</legend>
+    <div class="radio-row">
+      <label><input type="radio" name="origin" value="nascido" <%= values.origin === 'nascido' ? 'checked' : '' %>> Nascido na fazenda</label>
+      <label><input type="radio" name="origin" value="comprado" <%= values.origin === 'comprado' ? 'checked' : '' %>> Comprado</label>
+    </div>
+    <% if (errors.origin) { %><p class="field-error"><%= errors.origin %></p><% } %>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="motherId">Mãe (se nascido na fazenda)</label>
+        <select id="motherId" name="motherId">
+          <option value="">Desconhecida / não se aplica</option>
+          <% mothers.forEach(function (m) { %>
+            <option value="<%= m.id %>" <%= values.motherId == m.id ? 'selected' : '' %>><%= m.ear_tag %></option>
+          <% }); %>
+        </select>
+        <% if (errors.motherId) { %><p class="field-error"><%= errors.motherId %></p><% } %>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label for="purchaseDate">Data de compra (se comprado)</label>
+        <input type="date" id="purchaseDate" name="purchaseDate" value="<%= values.purchaseDate ?? '' %>">
+        <% if (errors.purchaseDate) { %><p class="field-error"><%= errors.purchaseDate %></p><% } %>
+      </div>
+      <div class="field">
+        <label for="purchasePrice">Valor de compra em R$ (se comprado)</label>
+        <input type="text" id="purchasePrice" name="purchasePrice" value="<%= values.purchasePrice ?? '' %>" placeholder="1.500,00">
+        <% if (errors.purchasePrice) { %><p class="field-error"><%= errors.purchasePrice %></p><% } %>
+      </div>
+    </div>
+  </fieldset>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="lotId">Lote (opcional)</label>
+      <select id="lotId" name="lotId">
+        <option value="">Nenhum</option>
+        <% lots.forEach(function (lot) { %>
+          <option value="<%= lot.id %>" <%= values.lotId == lot.id ? 'selected' : '' %>>
+            <%= lot.name %><% if (lot.farm_name) { %> — <%= lot.farm_name %><% } %>
+          </option>
+        <% }); %>
+      </select>
+      <% if (errors.lotId) { %><p class="field-error"><%= errors.lotId %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="pastureId">Pasto (opcional)</label>
+      <select id="pastureId" name="pastureId">
+        <option value="">Nenhum</option>
+        <% pastures.forEach(function (pasture) { %>
+          <option value="<%= pasture.id %>" <%= values.pastureId == pasture.id ? 'selected' : '' %>>
+            <%= pasture.name %><% if (pasture.farm_name) { %> — <%= pasture.farm_name %><% } %>
+          </option>
+        <% }); %>
+      </select>
+      <% if (errors.pastureId) { %><p class="field-error"><%= errors.pastureId %></p><% } %>
+    </div>
+  </div>
+
+  <% if (!isCreate) { %>
+    <div class="field">
+      <label for="status">Status</label>
+      <select id="status" name="status" required>
+        <option value="ativo" <%= values.status === 'ativo' ? 'selected' : '' %>>Ativo</option>
+        <option value="transferido" <%= values.status === 'transferido' ? 'selected' : '' %>>Transferido</option>
+        <option value="vendido" disabled>Vendido (registrar em Vendas)</option>
+        <option value="morto" disabled>Morto (registrar óbito)</option>
+      </select>
+      <% if (errors.status) { %><p class="field-error"><%= errors.status %></p><% } %>
+      <p class="hint">
+        Venda e óbito serão registrados em seus próprios módulos, com o
+        histórico correto, em vez de uma simples troca de status aqui.
+      </p>
+    </div>
+  <% } %>
+
+  <div class="field">
+    <label for="notes">Observações (opcional)</label>
+    <textarea id="notes" name="notes" rows="3" maxlength="2000"><%= values.notes ?? '' %></textarea>
+  </div>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Cadastrar' : 'Salvar alterações' %></button>
+  <a href="<%= isCreate ? '/animais' : `/animais/${animal.id}` %>" class="button">Cancelar</a>
+</form>
+
+<%- include('../partials/foot') %>

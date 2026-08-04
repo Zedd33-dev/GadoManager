@@ -1,0 +1,155 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<header class="record-header">
+  <div>
+    <h1><%= animal.ear_tag %></h1>
+    <p class="lead">
+      <%= breedLabels[animal.breed] %> · <%= animal.sex === 'M' ? 'Macho' : 'Fêmea' %> ·
+      <%= fmt.formatAge(animal.birth_date) %> · <%= animal.farm_name %>
+    </p>
+  </div>
+  <div class="record-actions">
+    <% if (userCan('animals:write')) { %>
+      <a href="/animais/<%= animal.id %>/editar" class="button">Editar</a>
+    <% } %>
+    <% if (userCan('animals:delete')) { %>
+      <form method="post" action="/animais/excluir" class="inline-form">
+        <%- include('../partials/csrfField') %>
+        <input type="hidden" name="ids" value="<%= animal.id %>">
+        <button type="button" class="button button--danger" data-confirm-delete data-confirm-message="Excluir permanentemente o animal <%= animal.ear_tag %>?">
+          Excluir
+        </button>
+      </form>
+    <% } %>
+  </div>
+</header>
+
+<div class="detail-grid">
+
+  <article class="chart-card">
+    <h2>Foto</h2>
+    <% if (animal.photo_path) { %>
+      <img src="/animais/<%= animal.id %>/foto" alt="Foto do animal <%= animal.ear_tag %>" class="animal-photo">
+    <% } else { %>
+      <p class="empty-state">Sem foto cadastrada.</p>
+    <% } %>
+    <% if (userCan('animals:write')) { %>
+      <form method="post" action="/animais/<%= animal.id %>/foto" enctype="multipart/form-data" class="photo-form">
+        <%- include('../partials/csrfField') %>
+        <label for="foto" class="visually-hidden">Escolher foto (JPEG, PNG ou WebP, até 5 MB)</label>
+        <input type="file" id="foto" name="foto" accept="image/jpeg,image/png,image/webp">
+        <button type="submit" class="button">Enviar foto</button>
+      </form>
+    <% } %>
+  </article>
+
+  <article class="chart-card">
+    <h2>Dados cadastrais</h2>
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Dados cadastrais do animal</caption>
+      <tbody>
+        <tr><th scope="row">SISBOV</th><td data-label="SISBOV"><%= animal.sisbov ?? '—' %></td></tr>
+        <tr><th scope="row">Origem</th><td data-label="Origem"><%= animal.origin === 'nascido' ? 'Nascido na fazenda' : 'Comprado' %></td></tr>
+        <% if (animal.mother_ear_tag) { %>
+          <tr><th scope="row">Mãe</th><td data-label="Mãe"><a href="/animais/<%= animal.mother_id %>"><%= animal.mother_ear_tag %></a></td></tr>
+        <% } %>
+        <% if (animal.origin === 'comprado') { %>
+          <tr><th scope="row">Data de compra</th><td data-label="Data de compra"><%= fmt.formatDate(animal.purchase_date) %></td></tr>
+          <tr><th scope="row">Valor de compra</th><td data-label="Valor de compra"><%= fmt.formatCurrency(animal.purchase_price_cents) %></td></tr>
+        <% } %>
+        <tr><th scope="row">Lote</th><td data-label="Lote"><%= animal.lot_name ?? '—' %></td></tr>
+        <tr><th scope="row">Pasto</th><td data-label="Pasto"><%= animal.pasture_name ?? '—' %></td></tr>
+        <tr>
+          <th scope="row">Status</th>
+          <td data-label="Status">
+            <span class="badge badge--<%= animal.status === 'ativo' ? 'success' : (animal.status === 'vendido' ? 'info' : (animal.status === 'morto' ? 'danger' : 'warning')) %>">
+              <%= statusLabels[animal.status] %>
+            </span>
+          </td>
+        </tr>
+        <% if (animal.notes) { %>
+          <tr><th scope="row">Observações</th><td data-label="Observações"><%= animal.notes %></td></tr>
+        <% } %>
+      </tbody>
+    </table>
+  </article>
+
+  <article class="chart-card detail-grid__wide">
+    <h2 id="titulo-curva-peso">Curva de peso</h2>
+    <% if (weightChart.values.length === 0) { %>
+      <p class="empty-state">
+        Nenhuma pesagem registrada — registrar pesagem.
+      </p>
+    <% } else { %>
+      <div class="chart-canvas-wrapper">
+        <canvas
+          id="chart-animal-weight"
+          role="img"
+          aria-label="Gráfico de linha mostrando a evolução do peso deste animal ao longo do tempo"
+          aria-describedby="tabela-curva-peso"
+        ></canvas>
+      </div>
+      <details>
+        <summary>Ver dados em tabela</summary>
+        <table class="table table--responsive" id="tabela-curva-peso">
+          <caption class="visually-hidden">Histórico de pesagens</caption>
+          <thead><tr><th scope="col">Data</th><th scope="col">Peso</th></tr></thead>
+          <tbody>
+            <% weightChart.labels.forEach(function (date, i) { %>
+              <tr>
+                <th scope="row"><%= fmt.formatDate(date) %></th>
+                <td data-label="Peso"><%= fmt.formatWeight(weightChart.values[i]) %></td>
+              </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </details>
+    <% } %>
+  </article>
+
+  <article class="chart-card detail-grid__wide">
+    <h2>Linha do tempo</h2>
+    <% if (timeline.length === 0) { %>
+      <p class="empty-state">Nenhum evento registrado para este animal ainda.</p>
+    <% } else { %>
+      <ul class="timeline">
+        <% timeline.forEach(function (entry) { %>
+          <li class="timeline__item">
+            <span class="timeline__date"><%= fmt.formatDate(entry.date) %></span>
+            <% if (entry.kind === 'pesagem') { %>
+              <span class="badge badge--info">Pesagem</span>
+              <span><%= fmt.formatWeight(entry.weightKg) %></span>
+            <% } else if (entry.kind === 'vacina' || entry.kind === 'tratamento') { %>
+              <span class="badge badge--<%= entry.applied ? 'success' : 'warning' %>">
+                <%= entry.kind === 'vacina' ? 'Vacina' : 'Tratamento' %>
+              </span>
+              <span><%= entry.name %> <%= entry.applied ? '(aplicado)' : '(agendado)' %></span>
+            <% } else if (entry.kind === 'movimentacao') { %>
+              <span class="badge badge--warning">Movimentação</span>
+              <span>
+                <% if (entry.fromLot || entry.toLot) { %>
+                  Lote: <%= entry.fromLot ?? '—' %> → <%= entry.toLot ?? '—' %>
+                <% } %>
+                <% if (entry.fromPasture || entry.toPasture) { %>
+                  Pasto: <%= entry.fromPasture ?? '—' %> → <%= entry.toPasture ?? '—' %>
+                <% } %>
+              </span>
+            <% } %>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </article>
+
+</div>
+
+<%- include('../partials/confirmDialog') %>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/bulkActions.js" defer></script>
+<script type="application/json" id="animal-weight-data"><%- weightChartJson %></script>
+<script src="/static/vendor/chartjs/chart.umd.js" defer></script>
+<script src="/static/js/animalChart.js" defer></script>
+
+<%- include('../partials/foot') %>

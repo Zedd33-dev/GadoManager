@@ -1,0 +1,171 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Animais</h1>
+<p class="lead">
+  <%= fmt.formatNumber(pageInfo.totalRows) %> animal(is) no escopo selecionado.
+</p>
+
+<form method="get" action="/animais" class="filter-bar" aria-label="Filtros e busca de animais">
+  <div class="filter-field filter-field--grow">
+    <label for="q">Buscar por brinco ou SISBOV</label>
+    <input type="search" id="q" name="q" value="<%= filters.search ?? '' %>" placeholder="Ex.: BV-0001">
+  </div>
+
+  <div class="filter-field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">Todos</option>
+      <% statusOptions.forEach(function (value) { %>
+        <option value="<%= value %>" <%= filters.status === value ? 'selected' : '' %>><%= statusLabels[value] %></option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="breed">Raça</label>
+    <select id="breed" name="breed">
+      <option value="">Todas</option>
+      <% breeds.forEach(function (value) { %>
+        <option value="<%= value %>" <%= filters.breed === value ? 'selected' : '' %>><%= breedLabels[value] %></option>
+      <% }); %>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="sex">Sexo</label>
+    <select id="sex" name="sex">
+      <option value="">Todos</option>
+      <option value="M" <%= filters.sex === 'M' ? 'selected' : '' %>>Macho</option>
+      <option value="F" <%= filters.sex === 'F' ? 'selected' : '' %>>Fêmea</option>
+    </select>
+  </div>
+
+  <div class="filter-field">
+    <label for="lote">Lote</label>
+    <select id="lote" name="lote">
+      <option value="">Todos</option>
+      <% lots.forEach(function (lot) { %>
+        <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
+          <%= lot.name %> — <%= lot.farm_name %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+
+  <button type="submit" class="button button--primary filter-submit">Filtrar</button>
+</form>
+
+<div class="list-toolbar">
+  <% if (userCan('animals:write')) { %>
+    <a href="/animais/novo" class="button button--primary">Novo animal</a>
+  <% } %>
+  <a href="/animais/exportar.csv?<%= csvQuery %>" class="button">
+    Exportar CSV
+  </a>
+</div>
+
+<% if (rows.length === 0) { %>
+  <p class="empty-state">
+    Nenhum animal encontrado com os filtros atuais.
+    <% if (userCan('animals:write')) { %> — <a href="/animais/novo">cadastrar animal</a>.<% } %>
+  </p>
+<% } else { %>
+
+  <form method="post" action="/animais/excluir" id="bulk-delete-form">
+    <%- include('../partials/csrfField') %>
+
+    <% if (userCan('animals:delete')) { %>
+      <div class="bulk-bar" hidden>
+        <span class="bulk-bar__count">0 selecionado(s)</span>
+        <button type="button" class="button button--danger bulk-bar__delete" disabled>
+          Excluir selecionados
+        </button>
+      </div>
+    <% } %>
+
+    <div class="table-scroll">
+      <table class="table table--responsive">
+        <caption class="visually-hidden">Lista de animais</caption>
+        <thead>
+          <tr>
+            <% if (userCan('animals:delete')) { %>
+              <th scope="col">
+                <span class="visually-hidden">Selecionar</span>
+                <input type="checkbox" class="select-all" aria-label="Selecionar todos os animais desta página">
+              </th>
+            <% } %>
+            <% [
+              ['earTag', 'Brinco'],
+              ['birthDate', 'Nascimento'],
+              ['breed', 'Raça'],
+              ['sex', 'Sexo'],
+              ['lot', 'Lote'],
+              ['weight', 'Peso mais recente'],
+              ['status', 'Status'],
+            ].forEach(function (col) { %>
+              <th scope="col">
+                <a href="?<%= buildSortQuery(col[0]) %>" class="sort-link <%= sort.key === col[0] ? 'sort-link--active' : '' %>">
+                  <%= col[1] %>
+                  <% if (sort.key === col[0]) { %><%= sort.direction === 'asc' ? '▲' : '▼' %><% } %>
+                </a>
+              </th>
+            <% }); %>
+          </tr>
+        </thead>
+        <tbody>
+          <% rows.forEach(function (row) { %>
+            <tr>
+              <% if (userCan('animals:delete')) { %>
+                <td data-label="Selecionar">
+                  <input type="checkbox" name="ids" value="<%= row.id %>" class="row-select" aria-label="Selecionar <%= row.ear_tag %>">
+                </td>
+              <% } %>
+              <th scope="row" data-label="Brinco">
+                <a href="/animais/<%= row.id %>"><%= row.ear_tag %></a>
+              </th>
+              <td data-label="Nascimento"><%= fmt.formatDate(row.birth_date) %></td>
+              <td data-label="Raça"><%= breedLabels[row.breed] %></td>
+              <td data-label="Sexo"><%= row.sex === 'M' ? 'Macho' : 'Fêmea' %></td>
+              <td data-label="Lote"><%= row.lot_name ?? '—' %></td>
+              <td data-label="Peso mais recente"><%= fmt.formatWeight(row.latest_weight_kg) %></td>
+              <td data-label="Status">
+                <span class="badge badge--<%= row.status === 'ativo' ? 'success' : (row.status === 'vendido' ? 'info' : (row.status === 'morto' ? 'danger' : 'warning')) %>">
+                  <%= statusLabels[row.status] %>
+                </span>
+              </td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+  </form>
+
+  <nav class="pagination" aria-label="Paginação">
+    <p class="pagination__summary">
+      Mostrando <%= fmt.formatNumber(pageInfo.rangeStart) %>–<%= fmt.formatNumber(pageInfo.rangeEnd) %>
+      de <%= fmt.formatNumber(pageInfo.totalRows) %>
+    </p>
+    <div class="pagination__controls">
+      <a
+        class="button <%= pageInfo.hasPrevious ? '' : 'is-disabled' %>"
+        href="?<%= buildPageQuery(pageInfo.page - 1) %>"
+        aria-disabled="<%= pageInfo.hasPrevious ? 'false' : 'true' %>"
+      >Anterior</a>
+      <span class="pagination__page">Página <%= pageInfo.page %> de <%= pageInfo.totalPages %></span>
+      <a
+        class="button <%= pageInfo.hasNext ? '' : 'is-disabled' %>"
+        href="?<%= buildPageQuery(pageInfo.page + 1) %>"
+        aria-disabled="<%= pageInfo.hasNext ? 'false' : 'true' %>"
+      >Próxima</a>
+    </div>
+  </nav>
+
+<% } %>
+
+<%- include('../partials/confirmDialog') %>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/bulkActions.js" defer></script>
+
+<%- include('../partials/foot') %>
