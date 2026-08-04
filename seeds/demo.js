@@ -53,7 +53,9 @@ const FARMS = [
     name: 'Fazenda Boa Vista',
     city: 'Campo Grande',
     state: 'MS',
-    totalAreaHa: 1240,
+    // Total area exceeds the grazing area: a real property also carries legal
+    // reserve, buildings and roads.
+    totalAreaHa: 96,
     tagPrefix: 'BV',
   },
   {
@@ -61,16 +63,31 @@ const FARMS = [
     name: 'Fazenda Santa Clara',
     city: 'Rondonópolis',
     state: 'MT',
-    totalAreaHa: 780,
+    totalAreaHa: 22,
     tagPrefix: 'SC',
   },
 ];
 
+/**
+ * Pasture areas are sized against the herd that actually grazes them, so the
+ * resulting UA/ha lands in the real Brazilian range (roughly 0.8-1.5 UA/ha on
+ * managed pasture) rather than the implausibly low figure that generous
+ * hectares over 130 head would produce.
+ *
+ * `maxStockingRateUaHa` varies by forage on purpose: Panicum maximum cv.
+ * Mombaça carries appreciably more than Brachiaria decumbens. Pasto Fundo is
+ * deliberately sized to sit *above* its capacity, so the overgrazing warning
+ * is demonstrable with the shipped dataset instead of being a feature nobody
+ * can see working.
+ *
+ * These capacities are PROVISIONAL - see the note on
+ * PROVISIONAL_STOCKING_CAPACITY_UA_HA in src/domain/constants.js.
+ */
 const PASTURES = [
-  { farm: 'boaVista', name: 'Pasto Sede', areaHa: 120, forage: 'Brachiaria brizantha cv. Marandu', restDays: 30 },
-  { farm: 'boaVista', name: 'Pasto Baixada', areaHa: 95, forage: 'Panicum maximum cv. Mombaça', restDays: 35 },
-  { farm: 'boaVista', name: 'Pasto Fundo', areaHa: 140, forage: 'Brachiaria decumbens', restDays: 28 },
-  { farm: 'santaClara', name: 'Pasto do Cocho', areaHa: 60, forage: 'Brachiaria brizantha cv. Marandu', restDays: 21 },
+  { farm: 'boaVista', name: 'Pasto Sede', areaHa: 18, forage: 'Brachiaria brizantha cv. Marandu', restDays: 30, capacity: 1.3 },
+  { farm: 'boaVista', name: 'Pasto Baixada', areaHa: 20, forage: 'Panicum maximum cv. Mombaça', restDays: 35, capacity: 1.6 },
+  { farm: 'boaVista', name: 'Pasto Fundo', areaHa: 26, forage: 'Brachiaria decumbens', restDays: 28, capacity: 1.0 },
+  { farm: 'santaClara', name: 'Pasto do Cocho', areaHa: 13, forage: 'Brachiaria brizantha cv. Marandu', restDays: 21, capacity: 1.5 },
 ];
 
 const LOTS = [
@@ -164,8 +181,10 @@ function insertFarms(db) {
 
 function insertStructure(db, farmIds) {
   const pastureStatement = db.prepare(
-    `INSERT INTO pastures (farm_id, name, area_ha, forage_type, rest_period_days, active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, ?, ?)`,
+    `INSERT INTO pastures
+       (farm_id, name, area_ha, forage_type, rest_period_days,
+        max_stocking_rate_ua_ha, active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
   );
   const lotStatement = db.prepare(
     `INSERT INTO lots (farm_id, name, description, active, created_at, updated_at)
@@ -177,7 +196,8 @@ function insertStructure(db, farmIds) {
     pastureIds[pasture.name] = Number(
       pastureStatement.run(
         farmIds[pasture.farm], pasture.name, pasture.areaHa,
-        pasture.forage, pasture.restDays, NOW_TIMESTAMP, NOW_TIMESTAMP,
+        pasture.forage, pasture.restDays, pasture.capacity,
+        NOW_TIMESTAMP, NOW_TIMESTAMP,
       ).lastInsertRowid,
     );
   }
