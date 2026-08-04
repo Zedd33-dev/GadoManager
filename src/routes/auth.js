@@ -6,6 +6,7 @@ import { Router } from 'express';
 import { getDb } from '../config/db.js';
 import { authenticate } from '../services/authService.js';
 import { rotateCsrfToken } from '../middleware/csrf.js';
+import { setFlash } from '../middleware/flash.js';
 
 const router = Router();
 
@@ -65,6 +66,12 @@ router.post('/login', async (req, res, next) => {
 
       req.session.userId = result.user.id;
       rotateCsrfToken(req);
+      // Set after regenerate() (a fresh session) and before save(), so it is
+      // persisted in the same write and survives to the next request. This is
+      // the demonstration of the flash mechanism Phase 8's create/update/
+      // delete actions will reuse - logout cannot use it the same way, since
+      // session.destroy() removes the session the message would live in.
+      setFlash(req, 'success', `Bem-vindo(a), ${result.user.name}.`);
 
       return req.session.save((saveError) => {
         if (saveError) return next(saveError);

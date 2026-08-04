@@ -8,7 +8,7 @@
  * `docs/architecture.md`:
  *
  *   security headers -> body parsing -> static assets -> session -> load user
- *   -> CSRF token -> CSRF verification -> tenant scope -> routes -> errors
+ *   -> flash -> CSRF token -> CSRF verification -> tenant scope -> routes -> errors
  *
  * Each stage depends on the one before it: CSRF verification needs both a
  * parsed body and a session, and the tenant scope needs a loaded user.
@@ -22,6 +22,7 @@ import { notFoundHandler, errorHandler } from './middleware/errors.js';
 import { createSessionMiddleware } from './middleware/session.js';
 import { csrfToken, verifyCsrf } from './middleware/csrf.js';
 import { loadUser, requireLogin } from './middleware/auth.js';
+import { flashMiddleware } from './middleware/flash.js';
 import { resolveTenantScope, requireFarmAccess } from './middleware/tenant.js';
 import * as format from './lib/format.js';
 import authRoutes from './routes/auth.js';
@@ -43,7 +44,8 @@ export function createApp() {
 
   // Security headers. The content security policy is restricted to same-origin
   // assets, which the application can satisfy because nothing is loaded from a
-  // CDN - including Chart.js, which is vendored into public/.
+  // CDN - including Chart.js, served same-origin from its own npm package
+  // (see the /static/vendor/chartjs route below).
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -94,6 +96,7 @@ export function createApp() {
   // Session, then the user it identifies.
   app.use(createSessionMiddleware());
   app.use(loadUser);
+  app.use(flashMiddleware);
 
   // CSRF: issue a token for every session, then verify it on anything that
   // changes state. Registered globally so a new route cannot forget it.
