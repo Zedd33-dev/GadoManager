@@ -8,6 +8,106 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 7 — Design system, mobile navigation and accessibility (2026-08-03)
+
+Formalizes the design system, adds working mobile navigation, fixes a real
+CSP bug found while auditing for one, and adds the toast mechanism Phase 8's
+create/update/delete actions will reuse.
+
+### Added
+
+- **Brand colour** (`--color-brand: #1f3a2e`) for the header, distinct from
+  the semantic `--color-success` so a green header bar is never read as a
+  status indicator.
+- **`.card` base** consolidating what `.kpi-card`, `.chart-card` and
+  `.auth-card` each redeclared identically.
+- **`src/views/partials/nav.ejs`** — persistent header with a brand link, a
+  primary nav, a hamburger toggle (three CSS bars, not a glyph or emoji), and
+  the user/logout box. Deliberately lists only "Painel" today; other modules
+  are appended to the same list as each ships in Phases 8-11, rather than
+  linking to routes that do not exist yet and would 404 from primary
+  navigation.
+- **`public/js/nav.js`** — toggles the mobile menu; the nav and user box are
+  always in the markup, so the page is fully usable if this script never
+  loads.
+- **`src/middleware/flash.js`** (`setFlash` / `flashMiddleware`) — one-time,
+  session-backed flash messages, rendered by `partials/toast.ejs` and
+  dismissed by `public/js/toast.js`. Demonstrated today on login
+  ("Bem-vindo(a), {name}."); Phase 8's create/update/delete actions call the
+  same `setFlash` after their own redirects.
+- **`.table--responsive`** utility: below 768px, a table's `<thead>` is
+  hidden the same way `.visually-hidden` hides content - clipped, never
+  `display: none`, so a screen reader still gets the column structure - and
+  each row becomes a labelled card via `data-label` on every `<td>`. Applied
+  to all six chart data tables today; Phase 8's list screens reuse the same
+  class.
+- **8 new tests** for the flash middleware.
+- **A contrast audit**: all 12 foreground/background pairs actually used in
+  the stylesheet, computed via the WCAG 2.1 relative luminance formula and
+  recorded as a comment at the top of `app.css`. All pass AA; most clear AAA.
+
+### Fixed
+
+- **A real CSP bug, found while auditing for exactly this.** Every dashboard
+  filter `<select>` used `onchange="this.form.submit()"` since Phase 5. The
+  CSP is `script-src 'self'` with no `unsafe-inline`, and a strict CSP blocks
+  inline event-handler attributes the same way it blocks an inline
+  `<script>` block - so that handler never actually ran in a real browser.
+  The filters kept working only because the submit button was always present
+  as a fallback (a deliberate Phase 5 design choice that, as it turned out,
+  was quietly carrying the whole feature). Verified the block is real by
+  attempting an inline `onclick` from the browser console against the live
+  CSP and confirming it does not fire, then replaced the attribute with a
+  proper listener in `public/js/filterBar.js`.
+- **Touch targets below the 44px minimum**: status chips were 32px, and the
+  `<summary>` toggles on chart tables and the diagnostics panel had no
+  enforced height. Both now measure 44px, verified in a live mobile viewport.
+
+### Decisions
+
+- **The nav lists only implemented modules.** Showing "Vacinas" or "Vendas"
+  now would either be a dead link or a 404 from primary navigation - neither
+  is acceptable in a working demo, even though our 404 page is itself honest
+  and styled. The nav grows by one line per phase instead.
+- **Toasts render as a dismissible banner at the top of the content**, not a
+  floating fixed-position corner popup - simpler to keep tappable on a phone
+  and there is no z-index/overlap to reason about.
+- **Flash only demonstrated on login, not logout.** `logout` calls
+  `session.destroy()`, which removes the very session a flash message would
+  need to survive in; `login` calls `session.regenerate()` on a session that
+  stays alive through the redirect, so the mechanism works there without a
+  second, cookie-based flash channel that nothing else in the app needs yet.
+- **No `<dialog>`/modal component was built.** The brief's "confirmation
+  dialogs for destructive actions" has no destructive action to confirm yet -
+  the first `DELETE`-shaped action arrives in Phase 8. Building a modal with
+  zero call sites would be exactly the kind of speculative, unused code this
+  project's own working rules rule out. Deferred explicitly, not silently
+  dropped.
+
+### Issue register
+
+Closes `UX-07` (deliberate brand colour, no gradients, no emoji icons),
+`UX-08` (working hamburger nav, 44px touch targets, responsive tables),
+`UX-09`'s remaining gap (formatting was already centralized in Phase 0; this
+phase is the accessibility half), `UX-10`'s contrast requirement
+(documented, computed ratios), `UX-11`'s toast half (confirmation dialogs
+remain open until Phase 8 has a destructive action).
+
+### Verified manually
+
+- `npm test` — 156 passing.
+- A direct HTTP request through the real login flow confirms the toast HTML
+  is present in the server's response with the exact welcome message.
+- In a live browser: attempting an inline `onclick` against the running
+  page's CSP does not fire, confirming the bug this phase fixes was real;
+  changing a filter `<select>` now correctly navigates via the external
+  script; at a 375px viewport the hamburger toggle is visible, opens the nav
+  with `aria-expanded` flipping to `true`, a status chip measures exactly
+  44px, and a chart table's `<thead>` clips off-screen while its `<td>`
+  elements switch to the labelled-row layout.
+
+---
+
 ## Phase 6 — Dashboard charts (2026-08-03)
 
 The six charts specified in the brief, each paired with an accessible data
