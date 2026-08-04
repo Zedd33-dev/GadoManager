@@ -218,20 +218,72 @@ error rather than an animal.
 
 ---
 
-## 9. Taxa de lotação (UA/ha) — *pendente, Fase 9*
+## 9. Taxa de lotação (UA/ha)
 
 **Convention:** 1 UA (unidade animal) = **450 kg de peso vivo**.
 
 ```
-UA total       = Σ (peso vivo de cada animal no pasto) ÷ 450
+UA total        = Σ (peso vivo de cada animal ativo no pasto) ÷ 450
 taxa de lotação = UA total ÷ área do pasto em hectares
 ```
 
 Expressing stocking as UA/ha rather than head/ha lets pastures carrying animals
 of different sizes be compared: forty 225 kg calves and twenty 450 kg steers both
-represent 20 UA.
+represent 20 UA. There is a test asserting exactly that equivalence.
 
-Constant defined as `ANIMAL_UNIT_KG` in `src/domain/constants.js`.
+Constant defined as `ANIMAL_UNIT_KG` in `src/domain/constants.js`; implemented in
+`src/services/stockingRateService.js`.
+
+### Live weight comes from the latest weighing
+
+Each animal contributes its **most recent** weighing, matching the rule used by
+the `Peso médio` KPI. Only `ativo` animals count — a sold animal no longer
+grazes the pasture.
+
+### The honest-denominator problem
+
+Some animals have never been weighed. They occupy the pasture and eat its
+forage, but contribute no measurable weight. Three options existed:
+
+| Option | Consequence |
+| --- | --- |
+| Exclude them silently | Understates the real rate, presented as fact |
+| Estimate from the herd average | Invents data and presents it as measurement |
+| **Compute from what is known and report the omission** | **Chosen** |
+
+The figure is therefore a **lower bound** whenever any animal in the pasture
+lacks a weighing, and the interface labels it *"Valor mínimo: exclui animais sem
+pesagem"* rather than presenting an underestimate as a measurement. This is the
+same "report the population the average was computed over" rule the Phase 4 KPIs
+follow.
+
+A pasture with animals but **no** weighings reports `—`, not `0` — a zero would
+claim the pasture is empty, which is the opposite of the truth. A pasture with
+genuinely no animals does report `0`.
+
+### Judging the rate
+
+Whether a rate is *too high* is **not** universal — it depends on forage
+species, soil, rainfall and management. Encoding one global threshold would be
+inventing a domain rule, so capacity is stored **per pasture**
+(`pastures.max_stocking_rate_ua_ha`, migration 004). Where it is not informed,
+the interface reports the computed rate and explicitly declines to judge it.
+
+Three bands, not a boolean:
+
+| Status | Condition |
+| --- | --- |
+| `adequada` | below 90% of capacity |
+| `atencao` | 90% of capacity or above, up to and including 100% |
+| `excedida` | strictly above capacity |
+
+A pasture at 95% is not overgrazed, but it is the one to move animals out of
+first — a warning that only appears after the damage is done is of little use to
+whoever has to act on it.
+
+> **Provisional figures.** The capacities in the demo seed (1,0–1,6 UA/ha by
+> forage) are plausible for managed pasture in the Cerrado but should be
+> confirmed against the thesis references before the defense.
 
 ---
 
@@ -255,6 +307,52 @@ a carência that has already been served.
 Planned: costs allocated to a lote divide across the animals in that lote for the
 period; farm-wide costs divide across the farm's active herd. The exact
 apportionment rule will be documented here when implemented.
+
+---
+
+## 14. Detecção de outlier na pesagem
+
+A weighing is flagged when the animal lost more than
+**`WEIGHT_LOSS_OUTLIER_FRACTION` (5%)** relative to its previous weighing:
+
+```
+perda = (peso anterior − peso informado) ÷ peso anterior
+sinaliza quando perda > 0,05
+```
+
+Expressed as a **fraction, not an absolute number of kilograms**, so it scales:
+a 20 kg drop is unremarkable for a 500 kg steer (4%) and alarming for a 120 kg
+calf (16,7%). Both cases are tested.
+
+> **A flagged weighing is a warning, never a rejection.** An animal genuinely
+> can lose weight — the dry-season model in the demo seed produces exactly that
+> — so refusing to record it would corrupt the herd's real history to guard
+> against a typo. The operator confirms explicitly and the value is stored. What
+> the check actually catches is the far more common cause of a sudden 90% drop:
+> a digit dropped while typing, 382 entered as 38.
+
+The comparison baseline is the animal's most recent weighing **strictly before**
+the new date, not simply its latest — so back-dating a forgotten weighing
+compares against what actually preceded it.
+
+---
+
+## 15. GMD não é recalculado — é derivado
+
+The brief asks for GMD to be recalculated when a weighing is recorded. **There
+is nothing to recalculate.** GMD is never stored: the dashboard KPI, the GMD
+curve and the per-row figure on the Pesagens list are all derived from the
+`weighings` table at read time.
+
+Recording a weighing therefore updates every GMD in the system by the act of
+inserting the row — no cache to invalidate, no denormalised column that could
+silently fall out of step with the weighings it summarises. The same reasoning
+applies to the lote and fazenda counters (head count, average weight), which are
+computed by their list queries rather than stored.
+
+What the interface does provide is the *newly implied* GMD for each animal
+immediately after a weighing is recorded, which is the genuinely useful part of
+the original request.
 
 ---
 

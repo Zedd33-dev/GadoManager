@@ -8,6 +8,113 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 9 — Pesagens, Lotes, Pastos and Fazendas (2026-08-03)
+
+Four modules, the keyboard-first weighing-day screen, and the two new domain
+formulas of this phase: stocking rate in UA/ha and weight-loss outlier
+detection.
+
+### Added
+
+- **`migrations/004_pasture_stocking_capacity.sql`** — per-pasture carrying
+  capacity.
+- **`src/services/stockingRateService.js`** — UA/ha with a three-band status,
+  and the honest-denominator handling described below.
+- **`src/services/weighingService.js`** — weighing validation, outlier
+  detection, batch-row collection.
+- **`src/services/structureService.js`** — validation for Fazendas, Lotes and
+  Pastos.
+- **`src/repositories/weighingRepository.js`**, plus CRUD on the lot, pasture
+  and farm repositories.
+- **`src/routes/weighings.js`** (list, CSV, single entry, batch entry) and
+  **`src/routes/structure.js`** (the three structural modules).
+- **`public/js/batchWeighing.js`** — the keyboard rhythm for a weighing day.
+- **61 new tests**, plus a 28-check end-to-end pass.
+
+### Decisions
+
+- **GMD is not "recalculated" — there is nothing to recalculate.** The brief
+  asks for automatic GMD recalculation on recording a weighing; GMD is never
+  stored, so inserting the row *is* the update, with no cache to invalidate
+  and no denormalised column that can fall out of step. Rather than build a
+  no-op "recalcular" button, the screens show the newly implied GMD after a
+  weighing, which is the useful part of the request. The lote and fazenda
+  counters are derived the same way.
+- **A flagged outlier is a warning, never a rejection.** An animal genuinely
+  can lose weight — the seed's dry-season model produces exactly that — so
+  refusing the value would corrupt real history to guard against a typo. The
+  operator confirms explicitly and it is stored. The threshold is *relative*
+  (5%) rather than absolute, so it scales between a 500 kg steer and a 120 kg
+  calf.
+- **A batch weighing is all-or-nothing.** One bad row writes nothing, verified
+  by test at the repository level and end-to-end. A partially applied weighing
+  day would leave the operator unable to tell which animals were recorded,
+  with no safe way to retry.
+- **Enter never submits the batch form**, only advances to the next field. An
+  accidental early submit is costly precisely because the batch is atomic.
+- **Carrying capacity is stored per pasture, not as a global constant.**
+  Whether a rate is too high depends on forage, soil and management; a single
+  hardcoded threshold would be an invented domain rule. Where capacity is not
+  informed, the interface reports the rate and declines to judge it.
+- **The stocking rate reports its own incompleteness.** Animals never weighed
+  occupy the pasture but contribute no measurable weight. Rather than exclude
+  them silently (understating) or estimate them (inventing data), the figure is
+  computed from what is known and labelled *"Valor mínimo"*. A pasture with
+  animals but no weighings reports `—`, not `0` — a zero would claim it is
+  empty.
+- **Fazendas, Lotes and Pastos have no delete, only deactivation.** All three
+  are referenced by animals, movements or costs; deleting would orphan history
+  or cascade it away. Deactivation is additionally refused while the record
+  still holds animals.
+- **Creating a farm grants the creator access in the same transaction.** A farm
+  outside every user's scope would be unreachable by any screen.
+
+### Fixed
+
+- **A LEFT JOIN phantom-row bug in the pasture occupancy query**, caught by its
+  own test: for a pasture with no animals the join emits one row with a NULL
+  animal, which `lw.weight_kg IS NULL` counted as an unweighed animal. Every
+  empty pasture would have reported "Sem pesagens" instead of a correct rate of
+  zero.
+- **`parseWeight` mis-parsed a plain decimal point**, also caught by its own
+  test: stripping dots unconditionally turned `482.5` into `4825`, a tenfold
+  error on a scale reading. Now applies the same rule as `parseCurrencyToCents`
+  — dots are only thousands separators when a comma is present.
+
+### Changed
+
+- **Demo pasture areas resized against the herd that grazes them**, and
+  capacities seeded. The previous areas (120–140 ha for ~130 head) produced
+  stocking rates of 0,14–0,28 UA/ha, roughly five times below a real Brazilian
+  operation, and with no capacity seeded the overgrazing warning could never
+  fire — a feature nobody could see working. Rates now land at 0,81–1,31 UA/ha,
+  with Pasto Fundo deliberately above its capacity so the warning is
+  demonstrable with the shipped dataset.
+
+### Issue register
+
+Closes the Pesagens, Pastos, Lotes and Fazendas bullets of `Missing features`,
+including batch entry, outlier detection, UA/ha with an overgrazing warning,
+and derived counters.
+
+### Verified manually
+
+- `npm test` — 295 passing.
+- A 28-check end-to-end pass: the Pesagens list shows the delta and GMD per
+  row; a date filter does not blind a row to the weighing that preceded it;
+  CSV carries a byte-verified BOM; a batch with an unknown tag returns 400,
+  names the offending tag, and — confirmed by a follow-up query — leaves the
+  *valid* row of that batch unwritten; a drastic weight drop is flagged with
+  its loss percentage and only recorded once explicitly confirmed; a `peão`
+  can reach batch weighing (it is their job) but is blocked from creating a
+  pasture; a `gerente` can create a pasture but is blocked from creating a
+  farm; and a Santa Clara manager sees only their own pasture.
+- A browser pass on the batch screen: 20 real input rows render server-side,
+  the first tag field is auto-focused, Enter chains tag → weight → next row's
+  tag, and Enter is confirmed not to submit the form.
+
+---
+
 ## Phase 8 — Animais module and reusable list infrastructure (2026-08-03)
 
 The first full CRUD module, and the list/pagination/sort/search/CSV/bulk-action
