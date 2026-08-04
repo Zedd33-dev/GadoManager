@@ -1,24 +1,13 @@
 <%- include('partials/head') %>
+<%- include('partials/nav') %>
 
-<header class="page-header">
-  <div>
-    <h1>Painel</h1>
-    <p class="lead">Visão geral do rebanho no escopo selecionado.</p>
-  </div>
-
-  <div class="user-box">
-    <span><strong><%= currentUser.name %></strong> — <%= roleLabel %></span>
-    <form method="post" action="/logout">
-      <%- include('partials/csrfField') %>
-      <button type="submit" class="button">Sair</button>
-    </form>
-  </div>
-</header>
+<h1>Painel</h1>
+<p class="lead">Visão geral do rebanho no escopo selecionado.</p>
 
 <form method="get" action="/" class="filter-bar" aria-label="Filtros do painel">
   <div class="filter-field">
     <label for="fazenda">Fazenda</label>
-    <select id="fazenda" name="fazenda" onchange="this.form.submit()">
+    <select id="fazenda" name="fazenda">
       <option value="">Todas</option>
       <% filters.farms.forEach(function (farm) { %>
         <option value="<%= farm.id %>" <%= filters.farmId === farm.id ? 'selected' : '' %>>
@@ -30,7 +19,7 @@
 
   <div class="filter-field">
     <label for="lote">Lote</label>
-    <select id="lote" name="lote" onchange="this.form.submit()">
+    <select id="lote" name="lote">
       <option value="">Todos</option>
       <% filters.lots.forEach(function (lot) { %>
         <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
@@ -42,7 +31,7 @@
 
   <div class="filter-field">
     <label for="status">Status do animal</label>
-    <select id="status" name="status" onchange="this.form.submit()">
+    <select id="status" name="status">
       <% statusOptions.forEach(function (value) { %>
         <option value="<%= value %>" <%= filters.status === value ? 'selected' : '' %>>
           <%= statusLabels[value] %>
@@ -53,7 +42,7 @@
 
   <div class="filter-field">
     <label for="periodo">Período (custos)</label>
-    <select id="periodo" name="periodo" onchange="this.form.submit()">
+    <select id="periodo" name="periodo">
       <option value="mes" <%= filters.period.preset === 'mes' ? 'selected' : '' %>>Mês atual</option>
       <option value="30" <%= filters.period.preset === '30' ? 'selected' : '' %>>Últimos 30 dias</option>
       <option value="90" <%= filters.period.preset === '90' ? 'selected' : '' %>>Últimos 90 dias</option>
@@ -230,7 +219,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-status">
+          <table class="table table--responsive" id="tabela-grafico-status">
             <caption class="visually-hidden">Distribuição do rebanho por status</caption>
             <thead>
               <tr><th scope="col">Status</th><th scope="col">Animais</th><th scope="col">%</th></tr>
@@ -239,8 +228,8 @@
               <% charts.herdStatus.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.status %></th>
-                  <td><%= fmt.formatNumber(row.count) %></td>
-                  <td><%= fmt.formatPercent(row.percent === null ? null : row.percent * 100) %></td>
+                  <td data-label="Animais"><%= fmt.formatNumber(row.count) %></td>
+                  <td data-label="%"><%= fmt.formatPercent(row.percent === null ? null : row.percent * 100) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -264,7 +253,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-peso-lote">
+          <table class="table table--responsive" id="tabela-grafico-peso-lote">
             <caption class="visually-hidden">Peso médio por lote</caption>
             <thead>
               <tr><th scope="col">Lote</th><th scope="col">Peso médio</th><th scope="col">Animais</th></tr>
@@ -273,8 +262,8 @@
               <% charts.weightByLot.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.lot %></th>
-                  <td><%= fmt.formatWeight(row.averageKg) %></td>
-                  <td><%= fmt.formatNumber(row.animalCount) %></td>
+                  <td data-label="Peso médio"><%= fmt.formatWeight(row.averageKg) %></td>
+                  <td data-label="Animais"><%= fmt.formatNumber(row.animalCount) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -302,7 +291,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-composicao">
+          <table class="table table--responsive" id="tabela-grafico-composicao">
             <caption class="visually-hidden">Composição do rebanho por faixa etária e sexo</caption>
             <thead>
               <tr><th scope="col">Faixa</th><th scope="col">Machos</th><th scope="col">Fêmeas</th><th scope="col">Total</th></tr>
@@ -311,9 +300,9 @@
               <% charts.herdComposition.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.range %></th>
-                  <td><%= fmt.formatNumber(row.male) %></td>
-                  <td><%= fmt.formatNumber(row.female) %></td>
-                  <td><%= fmt.formatNumber(row.total) %></td>
+                  <td data-label="Machos"><%= fmt.formatNumber(row.male) %></td>
+                  <td data-label="Fêmeas"><%= fmt.formatNumber(row.female) %></td>
+                  <td data-label="Total"><%= fmt.formatNumber(row.total) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -341,7 +330,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-evolucao-peso">
+          <table class="table table--responsive" id="tabela-grafico-evolucao-peso">
             <caption class="visually-hidden">Evolução mensal do peso médio por lote</caption>
             <thead>
               <tr><th scope="col">Mês</th><th scope="col">Lote</th><th scope="col">Peso médio</th></tr>
@@ -350,8 +339,8 @@
               <% charts.weightEvolution.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.month %></th>
-                  <td><%= row.lot %></td>
-                  <td><%= fmt.formatWeight(row.averageKg) %></td>
+                  <td data-label="Lote"><%= row.lot %></td>
+                  <td data-label="Peso médio"><%= fmt.formatWeight(row.averageKg) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -376,7 +365,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-gmd">
+          <table class="table table--responsive" id="tabela-grafico-gmd">
             <caption class="visually-hidden">GMD mensal por lote</caption>
             <thead>
               <tr><th scope="col">Mês</th><th scope="col">Lote</th><th scope="col">GMD</th></tr>
@@ -385,8 +374,8 @@
               <% charts.gmdCurve.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.month %></th>
-                  <td><%= row.lot %></td>
-                  <td><%= fmt.formatGmd(row.averageGmd) %></td>
+                  <td data-label="Lote"><%= row.lot %></td>
+                  <td data-label="GMD"><%= fmt.formatGmd(row.averageGmd) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -411,7 +400,7 @@
         </div>
         <details>
           <summary>Ver dados em tabela</summary>
-          <table class="table" id="tabela-grafico-custos">
+          <table class="table table--responsive" id="tabela-grafico-custos">
             <caption class="visually-hidden">Custos mensais por categoria</caption>
             <thead>
               <tr><th scope="col">Mês</th><th scope="col">Categoria</th><th scope="col">Valor</th></tr>
@@ -420,8 +409,8 @@
               <% charts.costsByCategory.rows.forEach(function (row) { %>
                 <tr>
                   <th scope="row"><%= row.month %></th>
-                  <td><%= row.category %></td>
-                  <td><%= fmt.formatCurrency(row.amountCents) %></td>
+                  <td data-label="Categoria"><%= row.category %></td>
+                  <td data-label="Valor"><%= fmt.formatCurrency(row.amountCents) %></td>
                 </tr>
               <% }); %>
             </tbody>
@@ -481,6 +470,8 @@
   <% } %>
 </details>
 
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/filterBar.js" defer></script>
 <script type="application/json" id="chart-data"><%- chartsJson %></script>
 <script src="/static/vendor/chartjs/chart.umd.js" defer></script>
 <script src="/static/js/charts.js" defer></script>

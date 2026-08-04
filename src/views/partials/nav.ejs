@@ -1,0 +1,28 @@
+<header class="app-header">
+  <div class="app-header__bar">
+    <a class="app-brand" href="/">GadoManager</a>
+
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="app-nav-menu">
+      <span class="nav-toggle__bar"></span>
+      <span class="nav-toggle__bar"></span>
+      <span class="nav-toggle__bar"></span>
+      <span class="visually-hidden">Abrir menu</span>
+    </button>
+
+    <nav id="app-nav-menu" class="app-nav" aria-label="Navegação principal">
+      <ul>
+        <li>
+          <a href="/" class="<%= currentPath === '/' ? 'is-active' : '' %>">Painel</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="user-box">
+      <span><strong><%= currentUser.name %></strong> — <%= roleLabel %></span>
+      <form method="post" action="/logout">
+        <%- include('csrfField') %>
+        <button type="submit" class="button">Sair</button>
+      </form>
+    </div>
+  </div>
+</header>
