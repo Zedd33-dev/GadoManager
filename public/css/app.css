@@ -1,13 +1,35 @@
 /*
- * Base stylesheet - Phase 0.
+ * Base stylesheet and design system.
  *
- * Only design tokens and element defaults live here for now. The full design
- * system (components, responsive tables, mobile navigation) is Phase 7; these
- * tokens are declared early so that later work extends this file instead of
- * replacing it.
+ * Design tokens (spacing, type, colour) were declared from Phase 0 so that
+ * every phase since has extended this file rather than fighting it. Phase 7
+ * completes the system: shared components, mobile navigation, responsive
+ * tables, and a documented accessibility pass.
  *
  * Colour choices are restrained and high-contrast on purpose: the application
- * is used outdoors, often in direct sunlight.
+ * is used outdoors, often in direct sunlight, and the herd-management UI has
+ * no reason to compete visually with that. No gradients, no emoji as icons -
+ * the hamburger toggle below is drawn with three CSS bars, and the toast
+ * close button uses the plain multiplication-sign glyph (x), not an emoji.
+ *
+ * Every colour pair actually used together in this file was checked against
+ * the WCAG 2.1 contrast formula (relative luminance from sRGB, threshold 4.5:1
+ * for normal text / 3:1 for large text and UI components). All twelve pairs in
+ * use pass AA; most clear AAA (7:1). Recorded here as evidence rather than
+ * left as an unverified claim:
+ *
+ *   text            on surface        16.66:1
+ *   text-muted      on surface         6.38:1
+ *   text-muted      on surface-sunken  5.83:1
+ *   text            on surface-sunken 15.24:1
+ *   success         on success-bg      5.47:1
+ *   warning         on warning-bg      5.25:1
+ *   danger          on danger-bg       6.35:1
+ *   info            on info-bg         6.75:1
+ *   white           on success         6.39:1
+ *   white           on info            7.96:1
+ *   white           on danger          7.54:1
+ *   white           on brand          12.33:1
  */
 
 :root {
@@ -34,7 +56,7 @@
   --color-text: #1c1f1a;
   --color-text-muted: #5b6157;
 
-  /* Semantic palette. All contrast-checked against --color-surface for WCAG AA. */
+  /* Semantic palette. Every pairing above is contrast-checked for WCAG AA. */
   --color-success: #2f6b3a;
   --color-success-bg: #e6f0e7;
   --color-warning: #8a5a00;
@@ -44,8 +66,18 @@
   --color-info: #1f5673;
   --color-info-bg: #e3eef4;
 
+  /* Brand - the header/nav identity. A distinct deep pasture green, separate
+     from --color-success so a green badge is never mistaken for a green
+     header bar meaning something else. */
+  --color-brand: #1f3a2e;
+  --color-brand-contrast: #ffffff;
+
   --radius: 6px;
   --focus-ring: 3px solid var(--color-info);
+
+  /* Below this width, primary navigation collapses behind the hamburger
+     toggle and any .table--responsive table becomes a stack of cards. */
+  --breakpoint-mobile: 768px;
 }
 
 *,
@@ -199,14 +231,72 @@ summary:focus-visible {
   padding: 0;
 }
 
-/* --- Page header and user box ------------------------------------------- */
+/* --- Shared card base -----------------------------------------------------
+   The KPI cards, chart cards and the login card differ only in their
+   internal content, not in the container itself - one declaration instead of
+   three copies of padding/background/border/radius. */
 
-.page-header {
+.kpi-card,
+.chart-card,
+.auth-card {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+/* --- App header and navigation ---------------------------------------------
+   Present on every authenticated page. Below --breakpoint-mobile the nav and
+   user box collapse behind the hamburger toggle; above it they are always
+   visible inline, and the toggle itself is hidden - there is nothing to
+   expand on a screen wide enough to show it already. */
+
+.app-header {
+  margin: calc(var(--space-8) * -1) calc(var(--space-4) * -1) var(--space-6);
+  padding: 0 var(--space-4);
+  background: var(--color-brand);
+  color: var(--color-brand-contrast);
+}
+
+.app-header__bar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--space-4);
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: var(--space-3) 0;
+}
+
+.app-brand {
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--color-brand-contrast);
+  text-decoration: none;
+  margin-right: auto;
+}
+
+.app-nav ul {
+  display: flex;
+  gap: var(--space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--color-brand-contrast);
+  text-decoration: none;
+  opacity: 0.85;
+}
+
+.app-nav a:hover,
+.app-nav a.is-active {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .user-box {
@@ -214,6 +304,113 @@ summary:focus-visible {
   align-items: center;
   gap: var(--space-3);
   font-size: var(--text-sm);
+  color: var(--color-brand-contrast);
+}
+
+.user-box .button {
+  color: var(--color-brand-contrast);
+  background: transparent;
+  border-color: currentColor;
+}
+
+/* Drawn with three plain bars, not a Unicode or emoji glyph, so it renders
+   identically (a solid colour, no font fallback) on every platform. */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.nav-toggle__bar {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: var(--color-brand-contrast);
+}
+
+@media (max-width: 768px) {
+  .nav-toggle {
+    display: flex;
+  }
+
+  .app-nav,
+  .user-box {
+    display: none;
+    width: 100%;
+  }
+
+  .app-header__bar.is-open .app-nav,
+  .app-header__bar.is-open .user-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .app-header__bar.is-open .app-nav ul {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+
+/* --- Toasts -----------------------------------------------------------------
+   Rendered as a dismissible banner at the top of the page content rather than
+   a floating fixed-position corner popup, which is simpler to keep readable
+   and tappable on a phone and avoids z-index/overlap concerns entirely. */
+
+.toast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+}
+
+.toast--success {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+  border-color: var(--color-success);
+}
+
+.toast--warning {
+  color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
+}
+
+.toast--danger {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger);
+}
+
+.toast--info {
+  color: var(--color-info);
+  background: var(--color-info-bg);
+  border-color: var(--color-info);
+}
+
+.toast__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  font-size: var(--text-lg);
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
 
 /* --- Forms --------------------------------------------------------------- */
@@ -284,9 +481,6 @@ summary:focus-visible {
   max-width: 26rem;
   margin: var(--space-12) auto;
   padding: var(--space-8);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
 }
 
 /* --- Badge: info variant ------------------------------------------------- */
@@ -360,13 +554,6 @@ summary:focus-visible {
   gap: var(--space-4);
 }
 
-.kpi-card {
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
 .kpi-card h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--text-sm);
@@ -411,8 +598,9 @@ summary:focus-visible {
 .chip {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  padding: var(--space-1) var(--space-3);
+  /* 44px minimum touch target, same rule as every other interactive control. */
+  min-height: 44px;
+  padding: 0 var(--space-3);
   font-size: var(--text-sm);
   color: var(--color-text);
   text-decoration: none;
@@ -475,13 +663,6 @@ summary:focus-visible {
   gap: var(--space-4);
 }
 
-.chart-card {
-  padding: var(--space-4);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
 .chart-card h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--text-base);
@@ -498,6 +679,9 @@ summary:focus-visible {
 }
 
 .chart-card details summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
   font-size: var(--text-sm);
   color: var(--color-info);
@@ -506,6 +690,77 @@ summary:focus-visible {
 .chart-card .table {
   margin-top: var(--space-2);
   font-size: var(--text-sm);
+}
+
+/* --- Responsive tables -------------------------------------------------------
+   Below the mobile breakpoint, a `.table--responsive` stops looking like a
+   table and starts looking like a stack of cards, one per row. The <thead> is
+   hidden the same way `.visually-hidden` hides content - clipped to 1px,
+   never `display: none` - so a screen reader still announces the column
+   structure even though sighted users see labelled rows instead. Each row's
+   `<th scope="row">` (already required by the accessible-table pattern used
+   throughout this project) becomes the card's title; each `<td>` prints its
+   own label from `data-label`, which the markup already supplies wherever
+   this class is used. */
+
+@media (max-width: 768px) {
+  .table--responsive thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .table--responsive,
+  .table--responsive tbody,
+  .table--responsive tr,
+  .table--responsive td,
+  .table--responsive th {
+    display: block;
+    width: 100%;
+  }
+
+  .table--responsive tr {
+    margin-bottom: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+
+  .table--responsive tr:last-child {
+    margin-bottom: 0;
+  }
+
+  .table--responsive th[scope='row'] {
+    padding: var(--space-2) var(--space-3);
+    font-weight: 700;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .table--responsive td {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--color-surface-sunken);
+    text-align: right;
+  }
+
+  .table--responsive td:last-child {
+    border-bottom: 0;
+  }
+
+  .table--responsive td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-align: left;
+  }
 }
 
 @media (max-width: 640px) {
@@ -530,6 +785,9 @@ summary:focus-visible {
 }
 
 .diagnostics summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
   cursor: pointer;
   font-weight: 600;
 }
@@ -540,8 +798,8 @@ summary:focus-visible {
 }
 
 /* --- Responsive -------------------------------------------------------------
-   Mobile-first is completed in Phase 7 (tables collapsing to cards, hamburger
-   nav); this early pass keeps the filter bar and KPI grid usable on a phone. */
+   Filter bar and KPI grid on a phone. The nav, toasts and tables have their
+   own responsive rules next to their component styles above. */
 
 @media (max-width: 640px) {
   .filter-bar {
@@ -555,9 +813,5 @@ summary:focus-visible {
 
   .kpi-grid {
     grid-template-columns: 1fr;
-  }
-
-  .page-header {
-    flex-direction: column;
   }
 }
