@@ -265,6 +265,25 @@ test('doses scheduled for today are upcoming, not overdue', () => {
   db.close();
 });
 
+test('each kind reports its own animal count, not the union of both', () => {
+  const { db, farmId, a, b, c } = buildFixture();
+
+  // Vaccines overdue on A and B; a treatment overdue on C only.
+  insertHealthEvent(db, a, { kind: 'vacina', scheduledDate: '2026-07-01' });
+  insertHealthEvent(db, b, { kind: 'vacina', scheduledDate: '2026-07-02' });
+  insertHealthEvent(db, c, { kind: 'tratamento', scheduledDate: '2026-07-03' });
+
+  const result = healthAlertCounts(db, [farmId], TODAY, '2026-09-02');
+
+  // The union is 3 animals, but neither sentence may claim that number:
+  // "2 doses de vacina em 3 animais" would be plainly false.
+  assert.equal(result.overdueAnimals, 3, 'the union across both kinds');
+  assert.equal(result.overdueVaccineAnimals, 2, 'only animals overdue on a vaccine');
+  assert.equal(result.overdueTreatmentAnimals, 1, 'only animals overdue on a treatment');
+
+  db.close();
+});
+
 test('overdue counts report doses and animals separately', () => {
   const { db, farmId, a } = buildFixture();
 
