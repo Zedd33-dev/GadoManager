@@ -18,6 +18,7 @@ import {
   formatWeight,
   formatGmd,
   formatPercent,
+  parseCurrencyToCents,
   formatStockingRate,
   formatArrobas,
   formatAge,
@@ -111,4 +112,31 @@ test('formatAge does not count a month that has not completed', () => {
   // On 14/07 the animal has not yet reached 4 full months since 15/03.
   assert.equal(formatAge('2026-03-15', '2026-07-14'), '3m');
   assert.equal(formatAge('2026-03-15', '2026-07-15'), '4m');
+});
+
+test('parseCurrencyToCents reads pt-BR notation with thousands and decimal separators', () => {
+  assert.equal(parseCurrencyToCents('1.500,00'), 150000);
+  assert.equal(parseCurrencyToCents('1.234.567,89'), 123456789);
+  assert.equal(parseCurrencyToCents('R$ 1.500,00'), 150000, 'the currency symbol is stripped');
+});
+
+test('parseCurrencyToCents accepts a bare integer or plain decimal', () => {
+  assert.equal(parseCurrencyToCents('1500'), 150000);
+  assert.equal(parseCurrencyToCents('1500.5'), 150050);
+});
+
+test('parseCurrencyToCents round-trips with formatCurrency', () => {
+  assert.equal(parseCurrencyToCents(formatCurrency(150000).replace(/ /g, ' ')), 150000);
+});
+
+test('parseCurrencyToCents returns null for empty or unparsable input', () => {
+  assert.equal(parseCurrencyToCents(''), null);
+  assert.equal(parseCurrencyToCents('   '), null);
+  assert.equal(parseCurrencyToCents(null), null);
+  assert.equal(parseCurrencyToCents(undefined), null);
+  assert.equal(parseCurrencyToCents('abc'), null);
+});
+
+test('parseCurrencyToCents rounds to the nearest centavo', () => {
+  assert.equal(parseCurrencyToCents('10,005'), 1001);
 });
