@@ -41,9 +41,16 @@ test('birth date must be a valid ISO date and not in the future', () => {
   assert.equal(validateAnimalInput(validInput({ birthDate: '2024-03-15' }), context).ok, true);
 });
 
-test('sex and breed must be from the allowed set', () => {
+test('sex must be from the allowed set', () => {
   assert.ok(validateAnimalInput(validInput({ sex: 'X' }), context).errors.sex);
-  assert.ok(validateAnimalInput(validInput({ breed: 'girolando' }), context).errors.breed);
+});
+
+test('breed is free text - any non-empty, reasonably-sized value is accepted', () => {
+  assert.equal(validateAnimalInput(validInput({ breed: 'Girolando' }), context).ok, true);
+  assert.equal(validateAnimalInput(validInput({ breed: 'Brahman' }), context).ok, true);
+  assert.ok(validateAnimalInput(validInput({ breed: '' }), context).errors.breed);
+  assert.ok(validateAnimalInput(validInput({ breed: '   ' }), context).errors.breed);
+  assert.ok(validateAnimalInput(validInput({ breed: 'x'.repeat(61) }), context).errors.breed);
 });
 
 test('a purchased animal requires a purchase date not before birth and not in the future', () => {

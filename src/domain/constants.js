@@ -84,13 +84,38 @@ export const CHART_TREND_MONTHS = 12;
 export const CALF_MAX_AGE_MONTHS = 12;
 export const YOUNG_MAX_AGE_MONTHS = 36;
 
-/** Breeds accepted by the schema's CHECK constraint. */
-export const BREEDS = Object.freeze(['nelore', 'angus', 'cruzado']);
+/**
+ * Breed is free text in the schema (migration 005) - any breed or cross is
+ * accepted, not just the three the demo herd happens to use. This list is
+ * only suggestions offered in a <datalist> on the animal form, to save typing
+ * for the common case; it is not a validation allow-list.
+ */
+export const SUGGESTED_BREEDS = Object.freeze([
+  'Nelore',
+  'Angus',
+  'Nelore x Angus (Cruzado)',
+  'Brahman',
+  'Gir',
+  'Girolando',
+  'Guzerá',
+  'Senepol',
+  'Tabapuã',
+  'Brangus',
+]);
 
-export const BREED_LABELS = Object.freeze({
+/**
+ * Maps the three breed slugs the schema's CHECK constraint used to enforce
+ * ('nelore', 'angus', 'cruzado', before migration 005) to the display text
+ * now stored directly in `animals.breed`. Used only by the seed script,
+ * which still picks breeds internally by slug for its weighted-cohort and
+ * carcass-yield logic; the application itself has no remaining use for a
+ * slug -> label lookup; since breed is free text, the stored value already
+ * is the label.
+ */
+export const SEED_BREED_LABELS = Object.freeze({
   nelore: 'Nelore',
   angus: 'Angus',
-  cruzado: 'Cruzado',
+  cruzado: 'Nelore x Angus (Cruzado)',
 });
 
 /** MIME types accepted for an animal photo. */

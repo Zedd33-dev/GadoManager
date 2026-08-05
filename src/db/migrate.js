@@ -76,6 +76,36 @@ function readAppliedMigrations(db) {
  * @param {import('better-sqlite3').Database} db
  * @returns {string[]} the filenames that were applied
  */
+/**
+ * A migration that starts with this marker is rebuilding a table that other
+ * tables reference by foreign key (SQLite has no ALTER TABLE DROP CONSTRAINT,
+ * so removing a CHECK means: create the new table, copy the rows across, drop
+ * the old one, rename).
+ *
+ * That rebuild must NOT run inside an ordinary transaction. Two reasons,
+ * both load-bearing:
+ *
+ *  1. `PRAGMA foreign_keys` is a documented no-op once a transaction is
+ *     already open - it can only be changed between transactions. The normal
+ *     path below opens a transaction before the migration's SQL ever runs, so
+ *     a plain `PRAGMA foreign_keys = OFF;` line inside the file would silently
+ *     do nothing.
+ *  2. With enforcement ON, `DROP TABLE` on a table that others reference with
+ *     `ON DELETE CASCADE` cascades - it deletes every referencing row in
+ *     every child table, not just the dropped table's own rows. This is real,
+ *     verified SQLite behaviour (confirmed against a throwaway in-memory
+ *     database before this was written), not a hypothetical: an early attempt
+ *     at migration 005 silently deleted all 720 seeded weighings this way,
+ *     despite the migration's SQL never mentioning the weighings table.
+ *
+ * So this path disables enforcement first (outside any transaction), runs the
+ * rebuild in its own manual transaction, re-enables enforcement, and then
+ * runs `PRAGMA foreign_key_check` as a safety net - if the rebuild left any
+ * row pointing at a foreign key that no longer resolves, the migration fails
+ * loudly instead of shipping a quietly corrupted database.
+ */
+const REQUIRES_FK_REBUILD = /^-- requires: foreign_keys=off\r?\n/;
+
 export function runMigrations(db) {
   ensureMigrationsTable(db);
 
@@ -99,18 +129,59 @@ export function runMigrations(db) {
       continue;
     }
 
-    const apply = db.transaction(() => {
-      db.exec(sql);
-      db.prepare(
-        'INSERT INTO schema_migrations (filename, checksum, applied_at) VALUES (?, ?, ?)',
-      ).run(filename, checksum, new Date().toISOString());
-    });
+    if (REQUIRES_FK_REBUILD.test(sql)) {
+      applyTableRebuild(db, filename, sql, checksum);
+    } else {
+      const apply = db.transaction(() => {
+        db.exec(sql);
+        db.prepare(
+          'INSERT INTO schema_migrations (filename, checksum, applied_at) VALUES (?, ?, ?)',
+        ).run(filename, checksum, new Date().toISOString());
+      });
 
-    apply();
+      apply();
+    }
+
     executed.push(filename);
   }
 
   return executed;
+}
+
+/**
+ * Runs a `-- requires: foreign_keys=off` migration - see the comment above.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @param {string} filename
+ * @param {string} sql
+ * @param {string} checksum
+ */
+function applyTableRebuild(db, filename, sql, checksum) {
+  db.pragma('foreign_keys = OFF');
+
+  try {
+    db.exec('BEGIN');
+    try {
+      db.exec(sql);
+      db.prepare(
+        'INSERT INTO schema_migrations (filename, checksum, applied_at) VALUES (?, ?, ?)',
+      ).run(filename, checksum, new Date().toISOString());
+      db.exec('COMMIT');
+    } catch (err) {
+      db.exec('ROLLBACK');
+      throw err;
+    }
+  } finally {
+    db.pragma('foreign_keys = ON');
+  }
+
+  const danglingRefs = db.pragma('foreign_key_check');
+  if (danglingRefs.length > 0) {
+    throw new Error(
+      `Migration "${filename}" left ${danglingRefs.length} dangling foreign key reference(s). ` +
+        'The transaction already committed - this needs manual repair, not a retry.',
+    );
+  }
 }
 
 /**

@@ -5,7 +5,7 @@
   <div>
     <h1><%= animal.ear_tag %></h1>
     <p class="lead">
-      <%= breedLabels[animal.breed] %> · <%= animal.sex === 'M' ? 'Macho' : 'Fêmea' %> ·
+      <%= animal.breed %> · <%= animal.sex === 'M' ? 'Macho' : 'Fêmea' %> ·
       <%= fmt.formatAge(animal.birth_date) %> · <%= animal.farm_name %>
     </p>
   </div>

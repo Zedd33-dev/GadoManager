@@ -16,7 +16,7 @@ import { buildDashboardKpis } from '../services/kpiService.js';
 import { listAllFiltered } from '../repositories/animalRepository.js';
 import { listInScope as listFarmsInScope } from '../repositories/farmRepository.js';
 import { todayIso } from '../lib/dates.js';
-import { ANIMAL_STATUS_LABELS, BREED_LABELS } from '../domain/constants.js';
+import { ANIMAL_STATUS_LABELS } from '../domain/constants.js';
 
 const router = Router();
 
@@ -38,7 +38,6 @@ router.get('/relatorios/rebanho', requireCapability('dashboard:read'), (req, res
     kpis,
     animals,
     statusLabels: ANIMAL_STATUS_LABELS,
-    breedLabels: BREED_LABELS,
   });
 });
 

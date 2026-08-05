@@ -66,12 +66,23 @@
 
     <div class="field">
       <label for="breed">Raça</label>
-      <select id="breed" name="breed" required aria-invalid="<%= errors.breed ? 'true' : 'false' %>">
-        <option value="">Selecione…</option>
+      <input
+        type="text"
+        id="breed"
+        name="breed"
+        list="breed-options"
+        required
+        maxlength="60"
+        value="<%= values.breed ?? '' %>"
+        aria-invalid="<%= errors.breed ? 'true' : 'false' %>"
+        placeholder="Ex.: Nelore, Brahman, Girolando..."
+      >
+      <datalist id="breed-options">
         <% breeds.forEach(function (b) { %>
-          <option value="<%= b %>" <%= values.breed === b ? 'selected' : '' %>><%= breedLabels[b] %></option>
+          <option value="<%= b %>"></option>
         <% }); %>
-      </select>
+      </datalist>
+      <p class="hint">Digite qualquer raça ou cruzamento - as sugestões são só um atalho.</p>
       <% if (errors.breed) { %><p class="field-error"><%= errors.breed %></p><% } %>
     </div>
   </div>

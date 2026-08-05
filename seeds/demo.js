@@ -30,6 +30,7 @@ import { hashPassword } from '../src/lib/password.js';
 import { todayIso, addDays, addMonths, daysBetween, startOfMonth } from '../src/lib/dates.js';
 import { createGenerator } from './lib/random.js';
 import { buildWeightCurve } from './lib/growth.js';
+import { SEED_BREED_LABELS } from '../src/domain/constants.js';
 
 /** Fixed seed: `npm run seed` must produce the same herd every time. */
 const SEED = 20260803;
@@ -438,7 +439,10 @@ function insertAnimals(db, specs, farmIds, lotIds, pastureIds) {
         spec.sisbov,
         spec.birthDate,
         spec.sex,
-        spec.breed,
+        // The animal's own breed field is free text (migration 005); the
+        // generator still picks by slug internally for the weighted-cohort
+        // and carcass-yield logic below, so only the stored value converts.
+        SEED_BREED_LABELS[spec.breed] ?? spec.breed,
         spec.origin,
         motherId,
         spec.purchaseDate,

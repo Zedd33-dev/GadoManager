@@ -136,10 +136,32 @@ test('enumerated columns reject values outside their domain (DAT-03)', () => {
     /CHECK constraint failed/,
   );
   assert.throws(() => insertAnimal(db, farmId, { sex: 'X' }), /CHECK constraint failed/);
+
+  db.close();
+});
+
+test('breed is free text, not an enum (migration 005) - any breed is accepted', () => {
+  const db = createTestDb();
+  const farmId = insertFarm(db);
+
+  // Not restricted to the three breeds the demo herd happens to use - a real
+  // farm may run any breed or cross the professor cares to enter.
+  assert.ok(insertAnimal(db, farmId, { ear_tag: 'B001', breed: 'Girolando' }));
+  assert.ok(insertAnimal(db, farmId, { ear_tag: 'B002', breed: 'Brahman' }));
+
+  // Still bounded: not empty, not absurdly long (the CHECK on migration 005).
   assert.throws(
-    () => insertAnimal(db, farmId, { breed: 'girolando' }),
+    () => insertAnimal(db, farmId, { ear_tag: 'B003', breed: '' }),
     /CHECK constraint failed/,
-    'dairy breeds are out of scope for a beef-only system',
+  );
+  assert.throws(
+    () => insertAnimal(db, farmId, { ear_tag: 'B004', breed: '   ' }),
+    /CHECK constraint failed/,
+    'whitespace-only is not a breed name',
+  );
+  assert.throws(
+    () => insertAnimal(db, farmId, { ear_tag: 'B005', breed: 'x'.repeat(61) }),
+    /CHECK constraint failed/,
   );
 
   db.close();

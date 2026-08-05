@@ -14,7 +14,10 @@ import { parseCurrencyToCents } from '../lib/format.js';
 import { resolveSort } from '../lib/sorting.js';
 import { parsePagination } from '../lib/pagination.js';
 import { ANIMAL_SORT_COLUMNS } from '../repositories/animalRepository.js';
-import { ANIMAL_STATUS, BREEDS } from '../domain/constants.js';
+import { ANIMAL_STATUS } from '../domain/constants.js';
+
+/** Matches the schema's CHECK on `animals.breed` (migration 005) exactly. */
+const BREED_MAX_LENGTH = 60;
 
 const SEXES = ['M', 'F'];
 const ORIGINS = ['nascido', 'comprado'];
@@ -78,8 +81,12 @@ export function validateAnimalInput(input, context) {
   const sex = SEXES.includes(input.sex) ? input.sex : null;
   if (!sex) errors.sex = 'Selecione o sexo do animal.';
 
-  const breed = BREEDS.includes(input.breed) ? input.breed : null;
-  if (!breed) errors.breed = 'Selecione a raça.';
+  // Free text, not an enum (migration 005) - any breed or cross is accepted.
+  const breed = typeof input.breed === 'string' ? input.breed.trim() : '';
+  if (!breed) errors.breed = 'Informe a raça.';
+  else if (breed.length > BREED_MAX_LENGTH) {
+    errors.breed = `A raça deve ter no máximo ${BREED_MAX_LENGTH} caracteres.`;
+  }
 
   const origin = ORIGINS.includes(input.origin) ? input.origin : null;
   if (!origin) errors.origin = 'Selecione a origem.';

@@ -64,6 +64,30 @@ export function listInScope(db, farmIds, options = {}) {
 }
 
 /**
+ * Every distinct breed currently in use within the given scope, for the
+ * filter/form <datalist> suggestions. Breed is free text (migration 005), so
+ * there is no fixed enum to offer instead - this is the closest equivalent:
+ * whatever the farm has actually typed before.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @param {number[]} farmIds
+ * @returns {string[]}
+ */
+export function listDistinctBreeds(db, farmIds) {
+  const { placeholders, params } = inClause(farmIds);
+
+  return db
+    .prepare(
+      `SELECT DISTINCT breed
+         FROM animals
+        WHERE farm_id IN (${placeholders})
+        ORDER BY breed`,
+    )
+    .all(...params)
+    .map((row) => row.breed);
+}
+
+/**
  * Public sort keys accepted by the Animais list, mapped to the literal SQL
  * expression each one sorts by. Passed to `lib/sorting.js#resolveSort`, which
  * is what keeps an arbitrary request value from ever reaching `ORDER BY`.

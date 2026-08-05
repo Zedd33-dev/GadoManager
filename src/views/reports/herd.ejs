@@ -105,7 +105,7 @@
           <% animals.forEach(function (row) { %>
             <tr>
               <th scope="row"><%= row.ear_tag %></th>
-              <td><%= breedLabels[row.breed] %></td>
+              <td><%= row.breed %></td>
               <td><%= row.sex === 'M' ? 'Macho' : 'Fêmea' %></td>
               <td><%= fmt.formatDate(row.birth_date) %></td>
               <td><%= row.lot_name ?? '—' %></td>

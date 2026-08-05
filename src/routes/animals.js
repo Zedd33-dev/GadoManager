@@ -24,6 +24,7 @@ import {
   countFiltered,
   listPaginated,
   listAllFiltered,
+  listDistinctBreeds,
   findInScope,
   findWithDetailsInScope,
   listCandidateMothers,
@@ -40,14 +41,20 @@ import { listInScope as listFarmsInScope } from '../repositories/farmRepository.
 import { parseAnimalListQuery, validateAnimalInput } from '../services/animalService.js';
 import { evaluateWithdrawal } from '../services/healthService.js';
 import { listAppliedWithWithdrawal } from '../repositories/healthRepository.js';
-import {
-  ANIMAL_STATUS,
-  ANIMAL_STATUS_LABELS,
-  BREEDS,
-  BREED_LABELS,
-} from '../domain/constants.js';
+import { ANIMAL_STATUS, ANIMAL_STATUS_LABELS, SUGGESTED_BREEDS } from '../domain/constants.js';
 
 const router = Router();
+
+/**
+ * Breed suggestions for the <datalist> - whatever the farm has already typed,
+ * plus the curated starting list, deduplicated. Not a validation allow-list;
+ * see SUGGESTED_BREEDS.
+ */
+function breedSuggestions(db, farmIds) {
+  return [...new Set([...listDistinctBreeds(db, farmIds), ...SUGGESTED_BREEDS])].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR'),
+  );
+}
 
 /** Builds the option lists every Animais form/filter needs, scoped to the caller. */
 function loadFormOptions(db, farmIds) {
@@ -55,6 +62,7 @@ function loadFormOptions(db, farmIds) {
     farms: listFarmsInScope(db, farmIds),
     lots: listLotsInScope(db, farmIds),
     pastures: listPasturesInScope(db, farmIds),
+    breeds: breedSuggestions(db, farmIds),
   };
 }
 
@@ -92,8 +100,6 @@ router.get('/animais', requireCapability('animals:read'), (req, res) => {
     filters,
     sort,
     pageInfo,
-    breeds: BREEDS,
-    breedLabels: BREED_LABELS,
     statusOptions: Object.values(ANIMAL_STATUS),
     statusLabels: ANIMAL_STATUS_LABELS,
     csvQuery: buildQuery(current, { page: undefined }),
@@ -117,7 +123,7 @@ router.get('/animais/exportar.csv', requireCapability('animals:read'), (req, res
       r.sisbov,
       r.birth_date,
       r.sex,
-      BREED_LABELS[r.breed] ?? r.breed,
+      r.breed,
       r.origin === 'nascido' ? 'Nascido na fazenda' : 'Comprado',
       ANIMAL_STATUS_LABELS[r.status] ?? r.status,
       r.lot_name,
@@ -152,8 +158,6 @@ router.get('/animais/novo', requireCapability('animals:write'), (req, res) => {
     errors: {},
     values: {},
     mothers,
-    breeds: BREEDS,
-    breedLabels: BREED_LABELS,
     ...options,
   });
 });
@@ -191,8 +195,6 @@ router.post('/animais', requireCapability('animals:write'), (req, res, next) => 
       errors: result.errors,
       values: req.body,
       mothers,
-      breeds: BREEDS,
-      breedLabels: BREED_LABELS,
       ...options,
     });
   }
@@ -229,7 +231,6 @@ router.get('/animais/:id', requireCapability('animals:read'), (req, res, next) =
     weightChart,
     weightChartJson: toEmbeddableJson(weightChart),
     statusLabels: ANIMAL_STATUS_LABELS,
-    breedLabels: BREED_LABELS,
   });
 });
 
@@ -248,6 +249,7 @@ router.get('/animais/:id/editar', requireCapability('animals:write'), (req, res,
     farms: [],
     lots: listLotsInScope(db, [animal.farm_id]),
     pastures: listPasturesInScope(db, [animal.farm_id]),
+    breeds: breedSuggestions(db, [animal.farm_id]),
   };
   const mothers = listCandidateMothers(db, animal.farm_id).filter((m) => m.id !== animalId);
 
@@ -272,8 +274,6 @@ router.get('/animais/:id/editar', requireCapability('animals:write'), (req, res,
       notes: animal.notes,
     },
     mothers,
-    breeds: BREEDS,
-    breedLabels: BREED_LABELS,
     ...options,
   });
 });
@@ -310,11 +310,10 @@ router.post('/animais/:id/editar', requireCapability('animals:write'), (req, res
       errors: result.errors,
       values: req.body,
       mothers,
-      breeds: BREEDS,
-      breedLabels: BREED_LABELS,
       farms: [],
       lots: listLotsInScope(db, [animal.farm_id]),
       pastures: listPasturesInScope(db, [animal.farm_id]),
+      breeds: breedSuggestions(db, [animal.farm_id]),
     });
   }
 

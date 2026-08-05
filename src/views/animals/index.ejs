@@ -27,7 +27,7 @@
     <select id="breed" name="breed">
       <option value="">Todas</option>
       <% breeds.forEach(function (value) { %>
-        <option value="<%= value %>" <%= filters.breed === value ? 'selected' : '' %>><%= breedLabels[value] %></option>
+        <option value="<%= value %>" <%= filters.breed === value ? 'selected' : '' %>><%= value %></option>
       <% }); %>
     </select>
   </div>
@@ -133,7 +133,7 @@
                 <a href="/animais/<%= row.id %>"><%= row.ear_tag %></a>
               </th>
               <td data-label="Nascimento"><%= fmt.formatDate(row.birth_date) %></td>
-              <td data-label="Raça"><%= breedLabels[row.breed] %></td>
+              <td data-label="Raça"><%= row.breed %></td>
               <td data-label="Sexo"><%= row.sex === 'M' ? 'Macho' : 'Fêmea' %></td>
               <td data-label="Lote"><%= row.lot_name ?? '—' %></td>
               <td data-label="Peso mais recente"><%= fmt.formatWeight(row.latest_weight_kg) %></td>
