@@ -8,6 +8,31 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Self-registration and admin user management (2026-08-05)
+
+### Added
+
+- **Public "Criar conta" (`/registrar`)**, linked from the login page. A new
+  account starts as `peao` with zero rows in `user_farms` - the existing
+  SEC-06 guarantee (a user with no farm grants can address no farm data)
+  means registering can never itself grant access to anything; it only
+  becomes useful once an admin assigns a role and farms.
+- **`/usuarios`** (capability `users:manage`, already defined but unused
+  until now): lists every account and lets an admin change role, grant or
+  revoke access per farm via checkboxes, and deactivate/reactivate a login.
+  No delete - a user row is referenced by `health_events`, `movements` and
+  other history, so removing one would orphan or cascade away that history;
+  deactivating keeps the record intact and takes effect immediately, since
+  `loadUser` already re-reads the account on every request.
+- An admin cannot demote or deactivate their own account, so a mistake here
+  cannot lock every admin out of the one screen that could undo it.
+- **20-check end-to-end pass**: registration, duplicate-email rejection, the
+  farm-access gate on a fresh account, role/farm changes taking effect live,
+  deactivation blocking login itself (not just farm access), gerente/peao
+  blocked from `/usuarios`, and the self-protection rule.
+
+---
+
 ## Fixes — free-text breed, header overflow (2026-08-05)
 
 Two issues reported after a live look at the running site.
