@@ -10,6 +10,14 @@
   </details>
 <% } %>
 
-<p><a href="/">Voltar ao início</a></p>
+<div class="record-actions">
+  <a href="/" class="button">Voltar ao início</a>
+  <% if (currentUser) { %>
+    <form method="post" action="/logout" class="inline-form">
+      <%- include('../partials/csrfField') %>
+      <button type="submit" class="button">Sair</button>
+    </form>
+  <% } %>
+</div>
 
 <%- include('../partials/foot') %>
