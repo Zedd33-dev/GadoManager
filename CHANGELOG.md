@@ -8,6 +8,41 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Fixes — free-text breed, header overflow (2026-08-05)
+
+Two issues reported after a live look at the running site.
+
+### Changed
+
+- **Breed is free text, not a three-value enum.** `animals.breed` was
+  restricted to `'nelore' | 'angus' | 'cruzado'` by a schema CHECK
+  constraint - accurate for the demo herd, wrong as a general rule. Migration
+  `005_free_text_breed.sql` rebuilds the table with a free-text breed (still
+  bounded to 1-60 trimmed characters) and translates the three old slugs to
+  the display text they already meant. The animal form now takes any breed,
+  offering known breeds as `<datalist>` suggestions rather than restricting
+  input to them.
+- **Fixed a real data-loss bug in the migration runner**, found while
+  writing the above: `DROP TABLE` on a table other tables reference with
+  `ON DELETE CASCADE`, with foreign key enforcement on, cascades - it
+  silently deleted all 720 seeded weighings the first time this migration
+  ran, despite the migration's SQL never mentioning the weighings table. The
+  runner now supports a `-- requires: foreign_keys=off` marker for
+  migrations that rebuild a referenced table (SQLite's own documented
+  procedure for dropping a CHECK constraint), and runs
+  `PRAGMA foreign_key_check` afterward as a safety net.
+
+### Fixed
+
+- **The header nav overflowed its own width at desktop sizes.** `.app-nav
+  ul` had no `flex-wrap`, so the 13 nav links plus the header search box and
+  theme toggle were forced onto one line regardless of viewport width - at
+  1280px that line ran roughly 220px past the header, pushing the page into
+  horizontal scroll. The nav now wraps onto extra lines inside the header
+  bar instead; verified with no horizontal overflow from 375px to 1920px.
+
+---
+
 ## UI additions — dark mode, printable report, thumbnails, global search (2026-08-05)
 
 Four visual/functional additions requested outside the phase plan, between
