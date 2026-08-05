@@ -8,6 +8,33 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Visual polish pass (2026-08-05)
+
+A pass across `public/css/app.css` for general appearance, requested without
+a specific complaint to fix - see the commit for the full rationale.
+
+### Added
+
+- A restrained elevation system (shadows on cards, buttons, the header, the
+  login card), smooth transitions on every interactive element, table
+  header/row differentiation, and hover/active states on buttons and chips.
+- `--radius-lg` for page-level containers; smaller inline elements (badges,
+  chips) keep the original tighter radius.
+
+No colour value in the WCAG-audited palette changed - only shadow, motion
+and hover state were added on top of the same already-contrast-checked
+tokens, so the documented AA/AAA pairings still hold.
+
+### Fixed
+
+- A themed scrollbar rule (`* { scrollbar-width: thin }`) measurably changed
+  Chart.js's initial canvas sizing at some viewport widths, causing
+  horizontal overflow at 800px. Confirmed by A/B testing the exact rule.
+  Scoped to `html` instead, since the property is inherited and needed no
+  broader reach. Verified no overflow from 375px to 1920px, both themes.
+
+---
+
 ## Self-registration and admin user management (2026-08-05)
 
 ### Added
