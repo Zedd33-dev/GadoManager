@@ -26,12 +26,23 @@
       var currentlyDark = current === 'dark' || (!current && prefersDark);
       var next = currentlyDark ? 'light' : 'dark';
 
-      document.documentElement.setAttribute('data-theme', next);
       try {
         localStorage.setItem(STORAGE_KEY, next);
       } catch (err) {
-        // Nothing further to do - the theme still applies for this load.
+        // Nothing further to do - the reload below still picks up prefers-
+        // color-scheme even if the explicit choice cannot be saved.
       }
+
+      // A full reload, not just setAttribute() - every CSS-styled element
+      // would restyle live either way, but a page with a Chart.js chart
+      // (public/js/charts.js, animalChart.js) reads the theme's colours
+      // once, at chart-creation time, and bakes them into the canvas.
+      // Toggling the attribute alone left already-drawn chart text in
+      // whichever colour was correct for the *previous* theme - readable
+      // against neither background. Reloading is what re-runs that
+      // one-time read under the new theme, on every page, without having
+      // to teach each chart script how to repaint itself on a live toggle.
+      location.reload();
     });
   });
 })();
