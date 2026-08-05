@@ -1,0 +1,58 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Lembretes</h1>
+
+<ul class="status-chips">
+  <li><a class="chip <%= status === 'pendente' ? 'chip--active' : '' %>" href="?status=pendente">Pendentes</a></li>
+  <li><a class="chip <%= status === 'concluido' ? 'chip--active' : '' %>" href="?status=concluido">Concluídos</a></li>
+</ul>
+
+<div class="list-toolbar">
+  <% if (userCan('reminders:write')) { %>
+    <a href="/lembretes/novo" class="button button--primary">Novo lembrete</a>
+  <% } %>
+</div>
+
+<% if (reminders.length === 0) { %>
+  <p class="empty-state">
+    <%= status === 'pendente' ? 'Nenhum lembrete pendente.' : 'Nenhum lembrete concluído.' %>
+    <% if (userCan('reminders:write') && status === 'pendente') { %>
+      — <a href="/lembretes/novo">criar lembrete</a>.
+    <% } %>
+  </p>
+<% } else { %>
+  <ul class="timeline">
+    <% reminders.forEach(function (reminder) { %>
+      <li class="timeline__item">
+        <span class="timeline__date">
+          <%= fmt.formatDate(reminder.due_date) %>
+          <% if (!reminder.done_at && reminder.due_date < today) { %>
+            <span class="badge badge--danger">Atrasado</span>
+          <% } %>
+        </span>
+        <span>
+          <strong><%= reminder.title %></strong>
+          <% if (reminder.assigned_name) { %><span class="hint"> — <%= reminder.assigned_name %></span><% } %>
+          <% if (reminder.recurrence !== 'nenhuma') { %>
+            <span class="badge badge--info"><%= reminder.recurrence %></span>
+          <% } %>
+          <% if (reminder.description) { %><br><span class="hint"><%= reminder.description %></span><% } %>
+        </span>
+        <% if (userCan('reminders:complete')) { %>
+          <form method="post" action="/lembretes/<%= reminder.id %>/<%= reminder.done_at ? 'reabrir' : 'concluir' %>" class="inline-form">
+            <%- include('../partials/csrfField') %>
+            <button type="submit" class="button"><%= reminder.done_at ? 'Reabrir' : 'Concluir' %></button>
+          </form>
+        <% } %>
+        <% if (userCan('reminders:write')) { %>
+          <a href="/lembretes/<%= reminder.id %>/editar" class="button">Editar</a>
+        <% } %>
+      </li>
+    <% }); %>
+  </ul>
+<% } %>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

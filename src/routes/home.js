@@ -16,9 +16,13 @@ import {
   gmdCurveChart,
   costsByCategoryChart,
 } from '../services/chartDataService.js';
-import { todayIso } from '../lib/dates.js';
+import { todayIso, addDays } from '../lib/dates.js';
 import { toEmbeddableJson } from '../lib/safeJson.js';
+import { listUpcoming } from '../repositories/reminderRepository.js';
 import { ANIMAL_STATUS, ANIMAL_STATUS_LABELS } from '../domain/constants.js';
+
+/** How far ahead the dashboard's reminder widget looks. */
+const UPCOMING_REMINDER_WINDOW_DAYS = 14;
 
 const router = Router();
 
@@ -64,6 +68,11 @@ router.get('/', requireCapability('dashboard:read'), (req, res) => {
     costsByCategory: costsByCategoryChart(db, scopeArgs, today, lotOption),
   };
 
+  const upcomingReminders = listUpcoming(db, req.scope.effectiveFarmIds, {
+    until: addDays(today, UPCOMING_REMINDER_WINDOW_DAYS),
+    limit: 5,
+  });
+
   res.render('dashboard', {
     title: 'Painel',
     kpis,
@@ -74,6 +83,8 @@ router.get('/', requireCapability('dashboard:read'), (req, res) => {
     statusOptions: STATUS_OPTIONS,
     statusLabels: STATUS_LABELS,
     buildFilterQuery: (overrides) => buildFilterQuery(req, overrides),
+    upcomingReminders,
+    today,
     migrations: migrationStatus(db),
   });
 });

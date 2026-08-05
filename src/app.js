@@ -36,6 +36,9 @@ import weighingRoutes from './routes/weighings.js';
 import structureRoutes from './routes/structure.js';
 import healthRoutes from './routes/health.js';
 import movementRoutes from './routes/movements.js';
+import saleRoutes from './routes/sales.js';
+import costRoutes from './routes/costs.js';
+import reminderRoutes from './routes/reminders.js';
 
 export function createApp() {
   const app = express();
@@ -141,6 +144,9 @@ export function createApp() {
   app.use('/', structureRoutes);
   app.use('/', healthRoutes);
   app.use('/', movementRoutes);
+  app.use('/', saleRoutes);
+  app.use('/', costRoutes);
+  app.use('/', reminderRoutes);
 
   // Error handling, always last.
   app.use(notFoundHandler);

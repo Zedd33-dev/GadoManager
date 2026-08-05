@@ -1,0 +1,101 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1><%= isCreate ? 'Novo custo' : 'Editar custo' %></h1>
+
+<form method="post" action="<%= isCreate ? '/custos' : `/custos/${cost.id}/editar` %>" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <% if (isCreate && farms.length > 1) { %>
+    <div class="field">
+      <label for="farmId">Fazenda</label>
+      <select id="farmId" name="farmId" required>
+        <option value="">Selecione…</option>
+        <% farms.forEach(function (farm) { %>
+          <option value="<%= farm.id %>"><%= farm.name %></option>
+        <% }); %>
+      </select>
+    </div>
+  <% } %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="categorySlug">Categoria</label>
+      <select id="categorySlug" name="categorySlug" required aria-invalid="<%= errors.categorySlug ? 'true' : 'false' %>">
+        <option value="">Selecione…</option>
+        <% categories.forEach(function (c) { %>
+          <option value="<%= c.slug %>" <%= values.categorySlug === c.slug ? 'selected' : '' %>><%= c.name %></option>
+        <% }); %>
+      </select>
+      <% if (errors.categorySlug) { %><p class="field-error"><%= errors.categorySlug %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="costDate">Data</label>
+      <input type="date" id="costDate" name="costDate" value="<%= values.costDate ?? '' %>" required
+             aria-invalid="<%= errors.costDate ? 'true' : 'false' %>">
+      <% if (errors.costDate) { %><p class="field-error"><%= errors.costDate %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="amount">Valor (R$)</label>
+      <input type="text" inputmode="decimal" id="amount" name="amount" value="<%= values.amount ?? '' %>"
+             placeholder="1.500,00" required aria-invalid="<%= errors.amount ? 'true' : 'false' %>">
+      <% if (errors.amount) { %><p class="field-error"><%= errors.amount %></p><% } %>
+    </div>
+  </div>
+
+  <div class="field">
+    <label for="lotId">Lote (opcional — em branco lança como custo geral da fazenda)</label>
+    <select id="lotId" name="lotId">
+      <option value="">Geral (fazenda)</option>
+      <% lots.forEach(function (lot) { %>
+        <option value="<%= lot.id %>" <%= values.lotId == lot.id ? 'selected' : '' %>><%= lot.name %></option>
+      <% }); %>
+    </select>
+    <% if (errors.lotId) { %><p class="field-error"><%= errors.lotId %></p><% } %>
+  </div>
+
+  <div class="field">
+    <label for="description">Descrição (opcional)</label>
+    <input type="text" id="description" name="description" value="<%= values.description ?? '' %>" maxlength="200">
+  </div>
+
+  <% if (isCreate) { %>
+    <fieldset class="field-group">
+      <legend>Recorrência</legend>
+      <p class="hint">
+        Um custo recorrente é lançado como vários registros independentes, um
+        por mês (ou pelo intervalo escolhido) — cada um editável e excluível
+        separadamente depois.
+      </p>
+
+      <div class="field field--confirm">
+        <label>
+          <input type="checkbox" name="isRecurring" id="isRecurring">
+          Este custo se repete
+        </label>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="recurrenceMonths">Intervalo em meses</label>
+          <input type="number" id="recurrenceMonths" name="recurrenceMonths" min="1" placeholder="1">
+          <% if (errors.recurrenceMonths) { %><p class="field-error"><%= errors.recurrenceMonths %></p><% } %>
+        </div>
+        <div class="field">
+          <label for="occurrences">Quantas vezes lançar</label>
+          <input type="number" id="occurrences" name="occurrences" min="2" max="60" placeholder="12">
+          <% if (errors.occurrences) { %><p class="field-error"><%= errors.occurrences %></p><% } %>
+        </div>
+      </div>
+    </fieldset>
+  <% } %>
+
+  <button type="submit" class="button button--primary"><%= isCreate ? 'Lançar' : 'Salvar alterações' %></button>
+  <a href="/custos" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

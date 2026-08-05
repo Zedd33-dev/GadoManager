@@ -195,6 +195,32 @@
   <p class="hint"><%= kpis.healthAlerts.explanation %></p>
 </section>
 
+<section aria-labelledby="titulo-lembretes">
+  <h2 id="titulo-lembretes">Próximos lembretes</h2>
+
+  <% if (upcomingReminders.length === 0) { %>
+    <p class="empty-state">
+      Nenhum lembrete pendente nos próximos 14 dias.
+      <% if (userCan('reminders:write')) { %> — <a href="/lembretes/novo">criar lembrete</a>.<% } %>
+    </p>
+  <% } else { %>
+    <ul class="timeline">
+      <% upcomingReminders.forEach(function (reminder) { %>
+        <li class="timeline__item">
+          <span class="timeline__date">
+            <%= fmt.formatDate(reminder.due_date) %>
+            <% if (reminder.due_date < today) { %><span class="badge badge--danger">Atrasado</span><% } %>
+          </span>
+          <span>
+            <a href="/lembretes"><%= reminder.title %></a>
+            <% if (reminder.assigned_name) { %><span class="hint"> — <%= reminder.assigned_name %></span><% } %>
+          </span>
+        </li>
+      <% }); %>
+    </ul>
+  <% } %>
+</section>
+
 <section aria-labelledby="titulo-graficos">
   <h2 id="titulo-graficos">Gráficos</h2>
   <p class="hint">

@@ -1,0 +1,124 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Custos</h1>
+<p class="lead"><%= fmt.formatNumber(pageInfo.totalRows) %> lançamento(s).</p>
+
+<form method="get" action="/custos" class="filter-bar" aria-label="Filtros">
+  <div class="filter-field filter-field--grow">
+    <label for="q">Buscar por descrição</label>
+    <input type="search" id="q" name="q" value="<%= filters.search ?? '' %>">
+  </div>
+  <div class="filter-field">
+    <label for="categoria">Categoria</label>
+    <select id="categoria" name="categoria">
+      <option value="">Todas</option>
+      <% categories.forEach(function (c) { %>
+        <option value="<%= c.slug %>" <%= filters.categorySlug === c.slug ? 'selected' : '' %>><%= c.name %></option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="lote">Lote</label>
+    <select id="lote" name="lote">
+      <option value="">Todos / geral</option>
+      <% lots.forEach(function (lot) { %>
+        <option value="<%= lot.id %>" <%= filters.lotId === lot.id ? 'selected' : '' %>>
+          <%= lot.name %> — <%= lot.farm_name %>
+        </option>
+      <% }); %>
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="de">De</label>
+    <input type="date" id="de" name="de" value="<%= filters.from ?? '' %>">
+  </div>
+  <div class="filter-field">
+    <label for="ate">Até</label>
+    <input type="date" id="ate" name="ate" value="<%= filters.until ?? '' %>">
+  </div>
+  <button type="submit" class="button button--primary filter-submit">Filtrar</button>
+</form>
+
+<div class="list-toolbar">
+  <% if (userCan('costs:write')) { %>
+    <a href="/custos/novo" class="button button--primary">Novo custo</a>
+  <% } %>
+  <a href="/custos/exportar.csv?<%= csvQuery %>" class="button">Exportar CSV</a>
+</div>
+
+<% if (rows.length === 0) { %>
+  <p class="empty-state">
+    Nenhum custo encontrado.
+    <% if (userCan('costs:write')) { %> — <a href="/custos/novo">lançar custo</a>.<% } %>
+  </p>
+<% } else { %>
+  <div class="table-scroll">
+    <table class="table table--responsive">
+      <caption class="visually-hidden">Lista de custos</caption>
+      <thead>
+        <tr>
+          <% [['costDate','Data'],['category','Categoria'],['amount','Valor']].forEach(function (col) { %>
+            <th scope="col">
+              <a href="?<%= buildSortQuery(col[0]) %>" class="sort-link <%= sort.key === col[0] ? 'sort-link--active' : '' %>">
+                <%= col[1] %><% if (sort.key === col[0]) { %> <%= sort.direction === 'asc' ? '▲' : '▼' %><% } %>
+              </a>
+            </th>
+          <% }); %>
+          <th scope="col">Descrição</th>
+          <th scope="col">Lote</th>
+          <% if (userCan('costs:write')) { %><th scope="col">Ações</th><% } %>
+        </tr>
+      </thead>
+      <tbody>
+        <% rows.forEach(function (row) { %>
+          <tr>
+            <th scope="row"><%= fmt.formatDate(row.cost_date) %></th>
+            <td data-label="Categoria">
+              <%= row.category_name %>
+              <% if (row.is_recurring) { %><span class="badge badge--info">Recorrente</span><% } %>
+            </td>
+            <td data-label="Valor"><%= fmt.formatCurrency(row.amount_cents) %></td>
+            <td data-label="Descrição"><%= row.description ?? '—' %></td>
+            <td data-label="Lote"><%= row.lot_name ?? 'Geral (fazenda)' %></td>
+            <% if (userCan('costs:write')) { %>
+              <td data-label="Ações">
+                <a href="/custos/<%= row.id %>/editar">Editar</a>
+                <form method="post" action="/custos/<%= row.id %>/excluir" class="inline-form">
+                  <%- include('../partials/csrfField') %>
+                  <button type="button" class="button" data-confirm-delete
+                          data-confirm-message="Excluir este custo de <%= fmt.formatCurrency(row.amount_cents) %>?">
+                    Excluir
+                  </button>
+                </form>
+              </td>
+            <% } %>
+          </tr>
+        <% }); %>
+      </tbody>
+    </table>
+  </div>
+
+  <nav class="pagination" aria-label="Paginação">
+    <p class="pagination__summary">
+      Mostrando <%= fmt.formatNumber(pageInfo.rangeStart) %>–<%= fmt.formatNumber(pageInfo.rangeEnd) %>
+      de <%= fmt.formatNumber(pageInfo.totalRows) %>
+    </p>
+    <div class="pagination__controls">
+      <a class="button <%= pageInfo.hasPrevious ? '' : 'is-disabled' %>"
+         href="?<%= buildPageQuery(pageInfo.page - 1) %>"
+         aria-disabled="<%= pageInfo.hasPrevious ? 'false' : 'true' %>">Anterior</a>
+      <span class="pagination__page">Página <%= pageInfo.page %> de <%= pageInfo.totalPages %></span>
+      <a class="button <%= pageInfo.hasNext ? '' : 'is-disabled' %>"
+         href="?<%= buildPageQuery(pageInfo.page + 1) %>"
+         aria-disabled="<%= pageInfo.hasNext ? 'false' : 'true' %>">Próxima</a>
+    </div>
+  </nav>
+<% } %>
+
+<%- include('../partials/confirmDialog') %>
+
+<script src="/static/js/nav.js" defer></script>
+<script src="/static/js/bulkActions.js" defer></script>
+
+<%- include('../partials/foot') %>

@@ -1120,6 +1120,16 @@ kbd {
   box-shadow: inset 0 -1px 0 var(--color-border);
 }
 
+/* --- Blocked row (an animal under withdrawal, on the Vendas form) ----------- */
+
+.row--blocked {
+  opacity: 0.6;
+}
+
+.row--blocked input {
+  cursor: not-allowed;
+}
+
 /* --- Diagnostics ------------------------------------------------------------
    Developer-facing panel (permissions, migration status), kept out of the
    main dashboard flow since it is not part of the herd-management UX. */

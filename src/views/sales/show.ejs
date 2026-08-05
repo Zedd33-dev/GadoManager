@@ -1,0 +1,67 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Venda — <%= sale.buyer_name %></h1>
+<p class="lead">
+  <%= fmt.formatDate(sale.sale_date) %> · <%= fmt.formatCurrency(sale.price_per_arroba_cents) %> por arroba
+</p>
+
+<div class="table-scroll">
+  <table class="table table--responsive">
+    <caption class="visually-hidden">Animais vendidos e lucro estimado</caption>
+    <thead>
+      <tr>
+        <th scope="col">Brinco</th>
+        <th scope="col">Peso vivo</th>
+        <th scope="col">Rendimento</th>
+        <th scope="col">Arrobas</th>
+        <th scope="col">Valor</th>
+        <th scope="col">Custo estimado</th>
+        <th scope="col">Lucro estimado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% items.forEach(function (item) { %>
+        <tr>
+          <th scope="row"><a href="/animais/<%= item.animal_id %>"><%= item.ear_tag %></a></th>
+          <td data-label="Peso vivo"><%= fmt.formatWeight(item.live_weight_kg) %></td>
+          <td data-label="Rendimento"><%= fmt.formatPercent(item.carcass_yield_pct) %></td>
+          <td data-label="Arrobas"><%= fmt.formatArrobas(item.arrobas) %></td>
+          <td data-label="Valor"><%= fmt.formatCurrency(item.gross_value_cents) %></td>
+          <td data-label="Custo estimado"><%= fmt.formatCurrency(item.estimatedCostCents) %></td>
+          <td data-label="Lucro estimado">
+            <span class="<%= item.estimatedProfitCents >= 0 ? 'delta delta--positive' : 'delta delta--negative' %>">
+              <%= fmt.formatCurrency(item.estimatedProfitCents) %>
+            </span>
+          </td>
+        </tr>
+      <% }); %>
+    </tbody>
+    <tfoot>
+      <tr>
+        <th scope="row">Total</th>
+        <td></td><td></td>
+        <td data-label="Arrobas"><%= fmt.formatArrobas(items.reduce((s, i) => s + i.arrobas, 0)) %></td>
+        <td data-label="Valor"><%= fmt.formatCurrency(items.reduce((s, i) => s + i.gross_value_cents, 0)) %></td>
+        <td data-label="Custo estimado"><%= fmt.formatCurrency(items.reduce((s, i) => s + i.estimatedCostCents, 0)) %></td>
+        <td data-label="Lucro estimado"><%= fmt.formatCurrency(items.reduce((s, i) => s + i.estimatedProfitCents, 0)) %></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<p class="hint">
+  <strong>Custo estimado</strong> soma o preço de compra (quando comprado) ao
+  tempo de permanência do animal multiplicado pelo custo médio mensal por
+  animal ativo da fazenda. É uma média — não rastreia em qual lote o animal
+  passou cada mês nem pesa pelo tamanho do animal — por isso "estimado", não
+  "real". Ver <code>docs/business-rules.md</code> para a fórmula completa.
+</p>
+
+<% if (sale.notes) { %><p><%= sale.notes %></p><% } %>
+
+<a href="/vendas" class="button">Voltar</a>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

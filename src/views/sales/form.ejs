@@ -1,0 +1,103 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Nova venda</h1>
+
+<% if (errors.animals) { %><div class="alert alert--danger" role="alert"><%= errors.animals %></div><% } %>
+
+<form method="post" action="/vendas" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="buyerName">Comprador</label>
+      <input type="text" id="buyerName" name="buyerName" value="<%= values.buyerName ?? '' %>" required maxlength="120"
+             aria-invalid="<%= errors.buyerName ? 'true' : 'false' %>">
+      <% if (errors.buyerName) { %><p class="field-error"><%= errors.buyerName %></p><% } %>
+    </div>
+    <div class="field">
+      <label for="saleDate">Data da venda</label>
+      <input type="date" id="saleDate" name="saleDate" value="<%= values.saleDate ?? '' %>" max="<%= today %>" required
+             aria-invalid="<%= errors.saleDate ? 'true' : 'false' %>">
+      <% if (errors.saleDate) { %><p class="field-error"><%= errors.saleDate %></p><% } %>
+    </div>
+    <div class="field">
+      <label for="pricePerArroba">Preço por arroba (R$)</label>
+      <input type="text" inputmode="decimal" id="pricePerArroba" name="pricePerArroba"
+             value="<%= values.pricePerArroba ?? '' %>" placeholder="320,00" required
+             aria-invalid="<%= errors.pricePerArroba ? 'true' : 'false' %>">
+      <% if (errors.pricePerArroba) { %><p class="field-error"><%= errors.pricePerArroba %></p><% } %>
+    </div>
+  </div>
+
+  <fieldset class="field-group">
+    <legend>Animais</legend>
+    <p class="hint">
+      Informe o peso vivo e o rendimento de carcaça (40–65%) de cada animal
+      selecionado. Arrobas e valor são calculados sobre o peso de carcaça, não
+      o peso vivo: arrobas = peso vivo × rendimento ÷ 15.
+    </p>
+
+    <% if (animals.length === 0) { %>
+      <p class="empty-state">Nenhum animal ativo disponível para venda.</p>
+    <% } else { %>
+      <div class="table-scroll animal-picker">
+        <table class="table">
+          <caption class="visually-hidden">Animais disponíveis para venda</caption>
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">Selecionar</span></th>
+              <th scope="col">Brinco</th>
+              <th scope="col">Lote</th>
+              <th scope="col">Peso vivo (kg)</th>
+              <th scope="col">Rendimento (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% animals.forEach(function (animal) { %>
+              <tr class="<%= animal.underWithdrawal ? 'row--blocked' : '' %>">
+                <td>
+                  <input type="checkbox" name="animalIds" value="<%= animal.id %>" class="row-select"
+                         <%= animal.underWithdrawal ? 'disabled' : '' %>
+                         aria-label="Selecionar <%= animal.ear_tag %>">
+                </td>
+                <th scope="row">
+                  <%= animal.ear_tag %>
+                  <% if (animal.underWithdrawal) { %>
+                    <span class="badge badge--warning">
+                      Carência até <%= fmt.formatDate(animal.underWithdrawal.releaseDate) %>
+                    </span>
+                  <% } %>
+                </th>
+                <td><%= animal.lot_name ?? '—' %></td>
+                <td>
+                  <input type="text" inputmode="decimal" name="liveWeightKg_<%= animal.id %>" placeholder="510"
+                         <%= animal.underWithdrawal ? 'disabled' : '' %>>
+                </td>
+                <td>
+                  <input type="text" inputmode="decimal" name="carcassYieldPct_<%= animal.id %>" placeholder="54"
+                         <%= animal.underWithdrawal ? 'disabled' : '' %>>
+                </td>
+              </tr>
+              <% if (itemErrors[animal.id]) { %>
+                <tr><td></td><td colspan="4" class="field-error"><%= itemErrors[animal.id] %></td></tr>
+              <% } %>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Animais em período de carência aparecem bloqueados e não podem ser
+        selecionados até a data de liberação.
+      </p>
+
+      <button type="submit" class="button button--primary">Registrar venda</button>
+    <% } %>
+  </fieldset>
+
+  <a href="/vendas" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>
