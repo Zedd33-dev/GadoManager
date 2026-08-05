@@ -1088,6 +1088,24 @@ summary:focus-visible {
   grid-column: 1 / -1;
 }
 
+/* --- List thumbnail ---------------------------------------------------------
+   A small round preview on the Animais list, so the screen reads as a herd of
+   individuals rather than a spreadsheet. Animals with no photo get a plain
+   placeholder circle instead of a broken-image icon or an empty cell. */
+
+.thumb {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--color-surface-sunken);
+}
+
+.thumb--placeholder {
+  border: 1px dashed var(--color-border);
+}
+
 .animal-photo {
   display: block;
   max-width: 100%;

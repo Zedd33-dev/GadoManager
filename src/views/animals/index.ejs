@@ -95,6 +95,7 @@
                 <input type="checkbox" class="select-all" aria-label="Selecionar todos os animais desta página">
               </th>
             <% } %>
+            <th scope="col"><span class="visually-hidden">Foto</span></th>
             <% [
               ['earTag', 'Brinco'],
               ['birthDate', 'Nascimento'],
@@ -121,6 +122,13 @@
                   <input type="checkbox" name="ids" value="<%= row.id %>" class="row-select" aria-label="Selecionar <%= row.ear_tag %>">
                 </td>
               <% } %>
+              <td data-label="Foto">
+                <% if (row.photo_path) { %>
+                  <img class="thumb" src="/animais/<%= row.id %>/foto" alt="" width="44" height="44">
+                <% } else { %>
+                  <span class="thumb thumb--placeholder" aria-hidden="true"></span>
+                <% } %>
+              </td>
               <th scope="row" data-label="Brinco">
                 <a href="/animais/<%= row.id %>"><%= row.ear_tag %></a>
               </th>
