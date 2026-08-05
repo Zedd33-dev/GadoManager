@@ -8,6 +8,18 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Fix — chart text stuck black in dark mode (2026-08-05)
+
+`Chart.js` draws to a `<canvas>`, which a CSS custom property's dark-mode
+value cannot reach the way it reaches an HTML element. Both chart scripts
+had copied the light-theme palette as fixed hex strings, so every axis
+label, legend entry, tooltip and the dashboard donut's center total stayed
+dark-on-dark once dark mode actually shipped. Both now read the same custom
+properties via `getComputedStyle` at chart-init time instead, so chart text,
+gridlines and series colours all follow whichever theme is actually active.
+
+---
+
 ## Visual polish pass (2026-08-05)
 
 A pass across `public/css/app.css` for general appearance, requested without
