@@ -8,6 +8,35 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## UI additions — dark mode, printable report, thumbnails, global search (2026-08-05)
+
+Four visual/functional additions requested outside the phase plan, between
+Phase 11 and Phase 12.
+
+### Added
+
+- **Dark mode.** Follows `prefers-color-scheme` by default; a header toggle
+  overrides it explicitly and persists the choice in `localStorage`, applied
+  by a synchronous `<head>` script (`public/js/theme.js`) so there is no
+  flash of the wrong theme on load. Solid-fill controls (primary/danger
+  buttons, the active filter chip) keep one colour in both themes — only
+  text-on-tinted-background pairs needed a lighter dark-mode variant.
+- **Relatório do rebanho** (`/relatorios/rebanho`) — a printable summary
+  (herd composition, KPIs, full active-herd roster) that reuses
+  `buildDashboardKpis` rather than recomputing the same figures a second
+  way. A print stylesheet hides the app chrome and forces a white
+  background regardless of the active theme.
+- **Photo thumbnails** on the Animais list — a 44px round preview per row,
+  or a placeholder circle when no photo was uploaded.
+- **Global search** — a header search box, present on every page, that
+  submits to `/animais?q=` and reuses the list's existing ear-tag/SISBOV
+  filter rather than adding a second lookup path.
+
+No backend/domain logic changed; all four are additive UI on top of
+existing repositories and services.
+
+---
+
 ## Phase 11 — Vendas, Custos and Lembretes (2026-08-04)
 
 The commercial side of the herd: recording sales at arroba value, tracking
