@@ -1,0 +1,56 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<h1>Editar <%= editedUser.name %></h1>
+<p class="lead"><%= editedUser.email %></p>
+
+<form method="post" action="/usuarios/<%= editedUser.id %>/editar" class="record-form" novalidate>
+  <%- include('../partials/csrfField') %>
+
+  <div class="field">
+    <label for="role">Cargo</label>
+    <select id="role" name="role" required aria-invalid="<%= errors.role ? 'true' : 'false' %>">
+      <% roles.forEach(function (r) { %>
+        <option value="<%= r %>" <%= values.role === r ? 'selected' : '' %>><%= roleLabels[r] %></option>
+      <% }); %>
+    </select>
+    <% if (errors.role) { %><p class="field-error"><%= errors.role %></p><% } %>
+  </div>
+
+  <fieldset class="field-group">
+    <legend>Acesso a fazendas</legend>
+    <% if (farms.length === 0) { %>
+      <p class="hint">Nenhuma fazenda cadastrada.</p>
+    <% } else { %>
+      <div class="radio-row">
+        <% farms.forEach(function (farm) { %>
+          <label>
+            <input
+              type="checkbox"
+              name="farmIds"
+              value="<%= farm.id %>"
+              <%= grantedFarmIds.has(farm.id) ? 'checked' : '' %>>
+            <%= farm.name %><% if (farm.state) { %> (<%= farm.state %>)<% } %>
+          </label>
+        <% }); %>
+      </div>
+    <% } %>
+  </fieldset>
+
+  <div class="field field--confirm">
+    <label>
+      <input type="checkbox" name="active" <%= (isSelf || values.active === 'on') ? 'checked' : '' %> <%= isSelf ? 'disabled' : '' %>>
+      Conta ativa
+    </label>
+    <% if (isSelf) { %>
+      <p class="hint">Você não pode desativar sua própria conta.</p>
+    <% } %>
+  </div>
+
+  <button type="submit" class="button button--primary">Salvar alterações</button>
+  <a href="/usuarios" class="button">Cancelar</a>
+</form>
+
+<script src="/static/js/nav.js" defer></script>
+
+<%- include('../partials/foot') %>

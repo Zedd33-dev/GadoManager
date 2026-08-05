@@ -1,0 +1,74 @@
+<%- include('../partials/head') %>
+
+<div class="auth-card">
+  <h1>Criar conta</h1>
+  <p class="lead">
+    Sua conta é criada sem acesso a nenhuma fazenda - peça a um administrador
+    para liberar o acesso depois de entrar pela primeira vez.
+  </p>
+
+  <form method="post" action="/registrar" novalidate>
+    <%- include('../partials/csrfField') %>
+
+    <div class="field">
+      <label for="name">Nome</label>
+      <input
+        type="text"
+        id="name"
+        name="name"
+        value="<%= values.name ?? '' %>"
+        maxlength="120"
+        autocomplete="name"
+        required
+        autofocus
+        aria-invalid="<%= errors.name ? 'true' : 'false' %>">
+      <% if (errors.name) { %><p class="field-error"><%= errors.name %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input
+        type="email"
+        id="email"
+        name="email"
+        value="<%= values.email ?? '' %>"
+        autocomplete="username"
+        required
+        aria-invalid="<%= errors.email ? 'true' : 'false' %>">
+      <% if (errors.email) { %><p class="field-error"><%= errors.email %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="password">Senha</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        autocomplete="new-password"
+        required
+        aria-invalid="<%= errors.password ? 'true' : 'false' %>">
+      <p class="hint">Mínimo de 8 caracteres.</p>
+      <% if (errors.password) { %><p class="field-error"><%= errors.password %></p><% } %>
+    </div>
+
+    <div class="field">
+      <label for="confirmPassword">Confirmar senha</label>
+      <input
+        type="password"
+        id="confirmPassword"
+        name="confirmPassword"
+        autocomplete="new-password"
+        required
+        aria-invalid="<%= errors.confirmPassword ? 'true' : 'false' %>">
+      <% if (errors.confirmPassword) { %><p class="field-error"><%= errors.confirmPassword %></p><% } %>
+    </div>
+
+    <button type="submit" class="button button--primary">Criar conta</button>
+  </form>
+
+  <p class="hint hint--spaced">
+    Já tem conta? <a href="/login">Entrar</a>
+  </p>
+</div>
+
+<%- include('../partials/foot') %>

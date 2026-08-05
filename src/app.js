@@ -40,6 +40,7 @@ import saleRoutes from './routes/sales.js';
 import costRoutes from './routes/costs.js';
 import reminderRoutes from './routes/reminders.js';
 import reportRoutes from './routes/reports.js';
+import userRoutes from './routes/users.js';
 
 export function createApp() {
   const app = express();
@@ -138,6 +139,12 @@ export function createApp() {
 
   // Everything past this point requires a session.
   app.use(requireLogin);
+
+  // User management is a system-level capability (users:manage, admin-only),
+  // not farm-owned data - mounted before requireFarmAccess so an admin
+  // account with no farm assigned yet could still reach it and fix that.
+  app.use('/', userRoutes);
+
   app.use(requireFarmAccess);
   app.use('/', homeRoutes);
   app.use('/', animalRoutes);

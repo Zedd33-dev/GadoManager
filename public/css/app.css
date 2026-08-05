@@ -200,6 +200,10 @@ h2 {
   color: var(--color-text-muted);
 }
 
+.hint--spaced {
+  margin-top: var(--space-4);
+}
+
 /* Visible focus on every interactive element - never removed. */
 a:focus-visible,
 button:focus-visible,

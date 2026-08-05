@@ -52,6 +52,18 @@ export function listWithDetails(db, farmIds) {
     .all(...params);
 }
 
+/**
+ * Every farm in the system, unscoped. Only for the admin Usuários screen,
+ * where an admin must be able to grant a user access to any farm - not just
+ * the admin's own scope.
+ *
+ * @param {import('better-sqlite3').Database} db
+ * @returns {object[]}
+ */
+export function listAll(db) {
+  return db.prepare('SELECT id, name, city, state FROM farms ORDER BY name').all();
+}
+
 /** One farm with its full detail, scoped. */
 export function findDetailInScope(db, farmIds, farmId) {
   const { placeholders, params } = inClause(farmIds);
