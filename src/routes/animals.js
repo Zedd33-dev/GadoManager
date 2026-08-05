@@ -87,6 +87,7 @@ router.get('/animais', requireCapability('animals:read'), (req, res) => {
 
   res.render('animals/index', {
     title: 'Animais',
+    headerSearchQuery: filters.search,
     rows,
     filters,
     sort,

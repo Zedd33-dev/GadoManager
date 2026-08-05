@@ -354,6 +354,61 @@ summary:focus-visible {
   margin-right: auto;
 }
 
+/* --- Header search -----------------------------------------------------------
+   A plain GET form to /animais?q= - works from any page, needs no JavaScript,
+   and reuses the exact filter the Animais list already applies (ear tag or
+   SISBOV, case-insensitive LIKE), so there is no second search implementation
+   to keep in sync with the list's own filter bar. */
+
+.header-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.header-search input {
+  min-height: 44px;
+  min-width: 0;
+  flex: 1 1 12rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.header-search__button {
+  flex: 0 0 auto;
+  min-width: 44px;
+  padding: var(--space-2);
+  color: var(--color-brand-contrast);
+  background: transparent;
+  border-color: currentColor;
+}
+
+@media (min-width: 769px) {
+  /* Puts the search form and the nav links side by side instead of stacked -
+     .app-nav has no layout rule of its own above the mobile breakpoint
+     otherwise, since below it .is-open supplies its own (column) layout. */
+  .app-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .header-search {
+    order: -1;
+    margin: 0;
+  }
+
+  .header-search input {
+    flex-basis: 14rem;
+  }
+}
+
 .app-nav ul {
   display: flex;
   gap: var(--space-4);

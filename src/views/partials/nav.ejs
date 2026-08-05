@@ -10,6 +10,16 @@
     </button>
 
     <nav id="app-nav-menu" class="app-nav" aria-label="Navegação principal">
+      <form method="get" action="/animais" class="header-search" role="search">
+        <label for="header-search-q" class="visually-hidden">Buscar animal por brinco</label>
+        <input type="search" id="header-search-q" name="q" placeholder="Buscar por brinco..." value="<%= typeof headerSearchQuery === 'string' ? headerSearchQuery : '' %>">
+        <button type="submit" class="button header-search__button" aria-label="Buscar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="11" cy="11" r="7"></circle>
+            <path d="M21 21l-4.35-4.35"></path>
+          </svg>
+        </button>
+      </form>
       <ul>
         <li>
           <a href="/" class="<%= currentPath === '/' ? 'is-active' : '' %>">Painel</a>
