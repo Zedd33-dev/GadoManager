@@ -392,25 +392,35 @@ summary:focus-visible {
 @media (min-width: 769px) {
   /* Puts the search form and the nav links side by side instead of stacked -
      .app-nav has no layout rule of its own above the mobile breakpoint
-     otherwise, since below it .is-open supplies its own (column) layout. */
+     otherwise, since below it .is-open supplies its own (column) layout.
+     flex-wrap here (and on .app-nav ul below) is what keeps a wide link list
+     plus the search box wrapping onto a second line inside the header
+     instead of overflowing its width - a fixed-width search box or an
+     unwrapped link row previously pushed the whole bar past the viewport. */
   .app-nav {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
+    row-gap: var(--space-2);
     gap: var(--space-4);
   }
 
   .header-search {
     order: -1;
+    flex: 1 1 12rem;
+    max-width: 16rem;
     margin: 0;
   }
 
   .header-search input {
-    flex-basis: 14rem;
+    flex-basis: auto;
   }
 }
 
 .app-nav ul {
   display: flex;
+  flex-wrap: wrap;
+  row-gap: var(--space-2);
   gap: var(--space-4);
   list-style: none;
   margin: 0;
