@@ -31,20 +31,33 @@
   var currencyFormat = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
   var gmdFormat = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 
-  // Same semantic palette as public/css/app.css - kept in sync by hand since
-  // Chart.js reads plain colour values, not CSS custom properties.
+  // Same semantic palette as public/css/app.css, but read from the live CSS
+  // custom properties rather than copied as fixed hex values. Chart.js draws
+  // to a <canvas>, which cannot be styled or overridden by a CSS variable's
+  // dark-mode value the way an HTML element can - a hardcoded copy of the
+  // light-theme colours would leave every axis label, legend and tooltip
+  // near-black on a dark card regardless of theme. Reading getComputedStyle
+  // here picks up whichever value the cascade (prefers-color-scheme or the
+  // manual [data-theme] override) actually resolved for this page load.
+  var rootStyle = getComputedStyle(document.documentElement);
+  function cssVar(name) {
+    return rootStyle.getPropertyValue(name).trim();
+  }
+
   var PALETTE = {
-    success: '#2f6b3a',
-    warning: '#8a5a00',
-    danger: '#a32020',
-    info: '#1f5673',
-    text: '#1c1f1a',
-    muted: '#5b6157',
+    success: cssVar('--color-success'),
+    warning: cssVar('--color-warning'),
+    danger: cssVar('--color-danger'),
+    info: cssVar('--color-info'),
+    text: cssVar('--color-text'),
+    muted: cssVar('--color-text-muted'),
+    border: cssVar('--color-border'),
   };
 
-  var SERIES_COLORS = ['#1f5673', '#2f6b3a', '#8a5a00', '#a32020', '#5b6157'];
+  var SERIES_COLORS = [PALETTE.info, PALETTE.success, PALETTE.warning, PALETTE.danger, PALETTE.muted];
 
   Chart.defaults.color = PALETTE.text;
+  Chart.defaults.borderColor = PALETTE.border;
   Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
 
   /** Draws the herd total in the centre of the status donut. */

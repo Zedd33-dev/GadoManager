@@ -24,6 +24,18 @@
 
   const numberFormat = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 });
 
+  // Read from the live CSS custom properties, not a hardcoded copy - see the
+  // identical comment in public/js/charts.js. Without this, axis labels and
+  // the tooltip stayed at Chart.js's own default grey regardless of theme,
+  // which reads as "stuck in light mode" on a dark card.
+  const rootStyle = getComputedStyle(document.documentElement);
+  const textColor = rootStyle.getPropertyValue('--color-text').trim();
+  const borderColor = rootStyle.getPropertyValue('--color-border').trim();
+  const infoColor = rootStyle.getPropertyValue('--color-info').trim();
+
+  Chart.defaults.color = textColor;
+  Chart.defaults.borderColor = borderColor;
+
   new Chart(canvas, {
     type: 'line',
     data: {
@@ -32,7 +44,7 @@
         {
           label: 'Peso (kg)',
           data: data.values,
-          borderColor: '#1f5673',
+          borderColor: infoColor,
           backgroundColor: 'transparent',
           tension: 0.25,
           pointRadius: 3,
