@@ -72,12 +72,90 @@
   --color-brand: #1f3a2e;
   --color-brand-contrast: #ffffff;
 
+  /* Solid-fill controls (a button or chip with white text on a flat colour)
+     keep the same colour in both themes. The tinted variables above swap to
+     lighter tones in dark mode so text stays readable on a dark card, but a
+     white-on-solid-fill pairing does not need that swap - it already passes
+     contrast, and swapping it too would break it, since a bright dark-mode
+     accent is calibrated for text-on-dark, not white-on-solid. */
+  --color-success-solid: #2f6b3a;
+  --color-danger-solid: #a32020;
+  --color-info-solid: #1f5673;
+
   --radius: 6px;
   --focus-ring: 3px solid var(--color-info);
 
   /* Below this width, primary navigation collapses behind the hamburger
      toggle and any .table--responsive table becomes a stack of cards. */
   --breakpoint-mobile: 768px;
+
+  color-scheme: light dark;
+}
+
+/* --- Dark mode --------------------------------------------------------------
+   Two ways in: the OS/browser preference (prefers-color-scheme), and an
+   explicit user choice persisted in localStorage and applied as
+   [data-theme] on <html> by public/js/theme.js before first paint. The
+   explicit attribute always wins over the media query in either direction,
+   which is why the media-query block below excludes [data-theme="light"] -
+   otherwise a user on a dark-mode OS could not opt back into light.
+
+   Surfaces darken and text/border tones lighten; the semantic hues
+   (success/warning/danger/info) get a lighter, more saturated variant so
+   text keeps AA contrast against a darker tinted background. Solid-fill
+   controls are declared once above and never overridden here - see the
+   comment on --color-success-solid. */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-surface: #1e2420;
+    --color-surface-sunken: #12140f;
+    --color-border: #3a4139;
+    --color-text: #e9ece6;
+    --color-text-muted: #a9afa2;
+
+    --color-success: #7fd08f;
+    --color-success-bg: #1e3324;
+    --color-warning: #f0c36d;
+    --color-warning-bg: #3a2c10;
+    --color-danger: #f2948c;
+    --color-danger-bg: #3a1c1a;
+    --color-info: #86cdea;
+    --color-info-bg: #142a37;
+
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-surface: #1e2420;
+  --color-surface-sunken: #12140f;
+  --color-border: #3a4139;
+  --color-text: #e9ece6;
+  --color-text-muted: #a9afa2;
+
+  --color-success: #7fd08f;
+  --color-success-bg: #1e3324;
+  --color-warning: #f0c36d;
+  --color-warning-bg: #3a2c10;
+  --color-danger: #f2948c;
+  --color-danger-bg: #3a1c1a;
+  --color-info: #86cdea;
+  --color-info-bg: #142a37;
+
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+/* The native <dialog> element does not inherit body colours by default -
+   its UA stylesheet gives it Canvas/CanvasText, which stays a light box even
+   in dark mode unless told otherwise. */
+dialog {
+  color: var(--color-text);
+  background: var(--color-surface);
 }
 
 *,
@@ -313,6 +391,38 @@ summary:focus-visible {
   border-color: currentColor;
 }
 
+/* --- Theme toggle ------------------------------------------------------- */
+
+.theme-toggle {
+  min-width: 44px;
+  padding: var(--space-2);
+  color: var(--color-brand-contrast);
+  background: transparent;
+  border-color: currentColor;
+}
+
+.theme-toggle__icon--dark {
+  display: none;
+}
+
+:root[data-theme='dark'] .theme-toggle__icon--light {
+  display: none;
+}
+
+:root[data-theme='dark'] .theme-toggle__icon--dark {
+  display: inline;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .theme-toggle__icon--light {
+    display: none;
+  }
+
+  :root:not([data-theme='light']) .theme-toggle__icon--dark {
+    display: inline;
+  }
+}
+
 /* Drawn with three plain bars, not a Unicode or emoji glyph, so it renders
    identically (a solid colour, no font fallback) on every platform. */
 .nav-toggle {
@@ -455,8 +565,8 @@ summary:focus-visible {
 .button--primary {
   width: 100%;
   color: #ffffff;
-  background: var(--color-success);
-  border-color: var(--color-success);
+  background: var(--color-success-solid);
+  border-color: var(--color-success-solid);
   font-weight: 600;
 }
 
@@ -611,8 +721,8 @@ summary:focus-visible {
 
 .chip--active {
   color: #ffffff;
-  background: var(--color-info);
-  border-color: var(--color-info);
+  background: var(--color-info-solid);
+  border-color: var(--color-info-solid);
   font-weight: 600;
 }
 
@@ -789,8 +899,8 @@ summary:focus-visible {
 
 .button--danger {
   color: #ffffff;
-  background: var(--color-danger);
-  border-color: var(--color-danger);
+  background: var(--color-danger-solid);
+  border-color: var(--color-danger-solid);
 }
 
 .bulk-bar {
@@ -1152,6 +1262,63 @@ kbd {
 .diagnostics h3 {
   font-size: var(--text-base);
   margin: var(--space-4) 0 var(--space-2);
+}
+
+/* --- Printable report --------------------------------------------------------
+   `.report-sheet` is the on-screen preview of what actually prints - it stays
+   visible in the browser (so the user can proof it before printing) but the
+   surrounding app chrome (`.no-print`, the header, nav, toasts) is hidden only
+   inside the print media query, not with a JS-toggled class, so printing works
+   even if a script fails to load. */
+
+.report-sheet {
+  padding: var(--space-6);
+  margin-bottom: var(--space-8);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.report-sheet__header {
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-4);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.report-sheet section {
+  margin-bottom: var(--space-8);
+}
+
+.report-sheet section:last-child {
+  margin-bottom: 0;
+}
+
+@media print {
+  .app-header,
+  .no-print,
+  .toast {
+    display: none !important;
+  }
+
+  /* The print stylesheet always renders on a white page regardless of the
+     screen theme - dark-mode surfaces on paper would waste ink and are
+     unreadable if actually printed rather than saved as a PDF. */
+  body,
+  .report-sheet {
+    background: #ffffff;
+    color: #000000;
+  }
+
+  .report-sheet {
+    padding: 0;
+    border: 0;
+  }
+
+  .table,
+  .table th,
+  .table td {
+    border-color: #999999;
+  }
 }
 
 /* --- Responsive -------------------------------------------------------------

@@ -1,0 +1,124 @@
+<%- include('../partials/head') %>
+<%- include('../partials/nav') %>
+
+<div class="record-header no-print">
+  <div>
+    <h1>Relatório do rebanho</h1>
+    <p class="lead">Gerado em <%= fmt.formatDate(generatedAt) %>.</p>
+  </div>
+  <div class="record-actions">
+    <button type="button" class="button button--primary" data-print-trigger>Imprimir / salvar PDF</button>
+  </div>
+</div>
+
+<div class="report-sheet">
+  <header class="report-sheet__header">
+    <h1>Relatório do rebanho — GadoManager</h1>
+    <p>
+      <%= farms.map(function (f) { return f.name + (f.state ? ' (' + f.state + ')' : ''); }).join(' · ') %>
+    </p>
+    <p class="hint">Gerado em <%= fmt.formatDate(generatedAt) %></p>
+  </header>
+
+  <section>
+    <h2>Composição do rebanho</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Ativos</th>
+          <th scope="col">Vendidos</th>
+          <th scope="col">Mortos</th>
+          <th scope="col">Transferidos</th>
+          <th scope="col">Total já registrado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><%= kpis.herd.active %></td>
+          <td><%= kpis.herd.sold %></td>
+          <td><%= kpis.herd.dead %></td>
+          <td><%= kpis.herd.transferred %></td>
+          <td><%= kpis.herd.total %></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Indicadores</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Indicador</th>
+          <th scope="col">Valor</th>
+          <th scope="col">Base de cálculo</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Peso médio (última pesagem)</th>
+          <td><%= fmt.formatWeight(kpis.averageWeight.value) %></td>
+          <td><%= kpis.averageWeight.animalCount %> animal(is)</td>
+        </tr>
+        <tr>
+          <th scope="row">GMD médio</th>
+          <td><%= fmt.formatGmd(kpis.averageDailyGain.value) %></td>
+          <td><%= kpis.averageDailyGain.animalCount %> animal(is)</td>
+        </tr>
+        <tr>
+          <th scope="row">Custos no período (<%= kpis.monthlyCost.periodLabel %>)</th>
+          <td><%= fmt.formatCurrency(kpis.monthlyCost.value) %></td>
+          <td><%= kpis.monthlyCost.entryCount %> lançamento(s)</td>
+        </tr>
+        <tr>
+          <th scope="row">Doses de vacina/tratamento atrasadas</th>
+          <td><%= kpis.healthAlerts.overdueTotalDoses %></td>
+          <td><%= kpis.healthAlerts.overdueAnimals %> animal(is)</td>
+        </tr>
+        <tr>
+          <th scope="row">Sem pesagem recente (<%= kpis.withoutRecentWeighing.windowDays %> dias)</th>
+          <td><%= kpis.withoutRecentWeighing.value %></td>
+          <td><%= kpis.withoutRecentWeighing.neverWeighed %> nunca pesado(s)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Animais ativos (<%= animals.length %>)</h2>
+    <% if (animals.length === 0) { %>
+      <p class="empty-state">Nenhum animal ativo no escopo selecionado.</p>
+    <% } else { %>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Brinco</th>
+            <th scope="col">Raça</th>
+            <th scope="col">Sexo</th>
+            <th scope="col">Nascimento</th>
+            <th scope="col">Lote</th>
+            <th scope="col">Pasto</th>
+            <th scope="col">Peso mais recente</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% animals.forEach(function (row) { %>
+            <tr>
+              <th scope="row"><%= row.ear_tag %></th>
+              <td><%= breedLabels[row.breed] %></td>
+              <td><%= row.sex === 'M' ? 'Macho' : 'Fêmea' %></td>
+              <td><%= fmt.formatDate(row.birth_date) %></td>
+              <td><%= row.lot_name ?? '—' %></td>
+              <td><%= row.pasture_name ?? '—' %></td>
+              <td><%= fmt.formatWeight(row.latest_weight_kg) %></td>
+            </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    <% } %>
+  </section>
+</div>
+
+<script src="/static/js/print.js" defer></script>
+
+<%- include('../partials/foot') %>

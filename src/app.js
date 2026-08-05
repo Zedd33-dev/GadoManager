@@ -39,6 +39,7 @@ import movementRoutes from './routes/movements.js';
 import saleRoutes from './routes/sales.js';
 import costRoutes from './routes/costs.js';
 import reminderRoutes from './routes/reminders.js';
+import reportRoutes from './routes/reports.js';
 
 export function createApp() {
   const app = express();
@@ -147,6 +148,7 @@ export function createApp() {
   app.use('/', saleRoutes);
   app.use('/', costRoutes);
   app.use('/', reminderRoutes);
+  app.use('/', reportRoutes);
 
   // Error handling, always last.
   app.use(notFoundHandler);
