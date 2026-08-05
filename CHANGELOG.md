@@ -8,6 +8,21 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Fix — theme toggle left chart text in the wrong colour (2026-08-05)
+
+The previous fix (reading chart colours from CSS custom properties instead
+of a hardcoded copy) was correct on a fresh page load, but the toggle button
+itself only changed `[data-theme]` without reloading - every CSS-styled
+element restyles live off that attribute, but Chart.js reads colours once,
+at chart-creation time, and bakes them into the canvas as pixels. Switching
+theme without a reload left already-drawn chart text in whichever colour
+had been correct for the *previous* theme: white-on-light after leaving
+dark mode, or the reverse. The toggle now reloads the page after saving the
+choice, so every chart re-runs its colour read under the new theme like on
+any normal load. Verified both directions.
+
+---
+
 ## Fix — chart text stuck black in dark mode (2026-08-05)
 
 `Chart.js` draws to a `<canvas>`, which a CSS custom property's dark-mode
