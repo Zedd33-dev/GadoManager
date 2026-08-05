@@ -199,22 +199,28 @@ the record count separately, which is exactly what the cost KPI does.
 
 ---
 
-## 8. Arroba (@) — *pendente, Fase 11*
+## 8. Arroba (@) — venda e valor bruto
 
 **Convention:** 1 @ = **15 kg de carcaça**, not live weight.
 
 ```
-arrobas = peso_vivo_kg × (rendimento_carcaça_% ÷ 100) ÷ 15
-valor   = arrobas × preço_por_arroba
+arrobas = round2(peso_vivo_kg × (rendimento_carcaça_% ÷ 100) ÷ 15)
+valor_bruto = round(arrobas × preço_por_arroba)
 ```
 
 Cattle in Brazil are priced per arroba of **carcass**, so the conversion requires
-the carcass yield. The demo data applies this formula already
-(`seeds/demo.js`); the Vendas module and its tests arrive in Phase 11.
+the carcass yield. Implemented in `src/services/saleService.js#calculateSaleValue`,
+one call per sale item (an animal), with values stored in cents to avoid
+floating-point drift in currency totals.
 
 Typical yields: Nelore 51,5–54 %; cruzado and Angus 53–56,5 %. The schema
 constrains `carcass_yield_pct` to 40–65, outside which a value is a data-entry
 error rather than an animal.
+
+An animal still serving a [carência](#10-período-de-carência) cannot be sold —
+`saleService.validateSaleItem` blocks it and names the release date and the
+product responsible, both on the server (authoritative) and on the sale form
+(disabled checkbox, "Carência até" badge, for usability).
 
 ---
 
@@ -390,11 +396,31 @@ regression test.
 
 ---
 
-## 11. Custo por animal — *pendente, Fase 11*
+## 11. Lucro estimado por animal vendido
 
-Planned: costs allocated to a lote divide across the animals in that lote for the
-period; farm-wide costs divide across the farm's active herd. The exact
-apportionment rule will be documented here when implemented.
+Implemented in `src/services/saleService.js#estimateAccumulatedCost`. This is
+explicitly an **average allocation, not a per-lot cost trace**:
+
+```
+custo_médio_mensal = Σ (custos do período na fazenda) ÷ Σ (efetivo médio ativo no período)
+custo_acumulado_estimado(animal) = preço_de_compra(animal, se comprado)
+                                    + custo_médio_mensal × meses_na_fazenda(animal)
+lucro_estimado = valor_bruto_da_venda − custo_acumulado_estimado
+```
+
+`meses_na_fazenda` counts from the animal's `birth_date` (if born on the farm)
+or its purchase/entry date to the sale date. A precise per-animal cost would
+require reconstructing which costs applied to which lote across every
+movement the animal made — a much larger feature for a figure that would
+still be an allocation, not a measurement, since shared costs (pasture,
+labour, general treatments) have no objectively "correct" per-head split.
+The sale detail view labels this figure as an estimate/average so it is never
+read as an audited cost.
+
+Recurring costs (`custos`) expand at creation time into independent dated
+rows via `costService.expandRecurrence` (`addMonths`, capped at 60
+occurrences) — deleting one occurrence never affects the others, since each
+row is a fully independent `costs` record after expansion.
 
 ---
 

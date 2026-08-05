@@ -8,6 +8,64 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 11 — Vendas, Custos and Lembretes (2026-08-04)
+
+The commercial side of the herd: recording sales at arroba value, tracking
+costs (including recurring ones), and simple reminders on the dashboard.
+
+### Added
+
+- **`src/services/saleService.js`** — `calculateSaleValue` (arroba/carcass
+  math), `estimateAccumulatedCost` (average cost allocation, explicitly not a
+  per-lot trace — see [business-rules.md §11](docs/business-rules.md)),
+  `validateSaleItem` (blocks a sale while the animal is under carência) and
+  `validateSaleHeader`.
+- **`src/services/costService.js`** — `validateCostInput`,
+  `expandRecurrence` (a recurring cost becomes N independent dated rows).
+- **`src/services/reminderService.js`** — `validateReminderInput`,
+  `nextOccurrence` (calendar-aware advancement via `addMonths`, not a fixed
+  day count, so semanal/mensal/anual reminders don't drift).
+- **`src/repositories/saleRepository.js`**, **`costRepository.js`**,
+  **`reminderRepository.js`** — `insertSale` writes the sale header, items
+  and marks the animals `vendido` in one transaction; `insertCostBatch` does
+  the same for a recurring cost's occurrences.
+- **`src/routes/sales.js`**, **`costs.js`**, **`reminders.js`** and their
+  views. The sale form disables animals currently under carência and shows
+  the release date.
+- **"Próximos lembretes" widget** on the dashboard.
+- **31 new tests** (unit + integration), plus a 31-check end-to-end pass
+  covering the sale/carência block, recurring cost expansion and deletion,
+  reminder recurrence, CSV export, and role/tenant isolation (peão blocked
+  from creating sales/costs, a farm manager sees only their own sales).
+
+### Fixed
+
+- **Route ordering: `/vendas/:id` was registered before `/vendas/nova`.**
+  Express matched "nova" as the `:id` param and 404'd. Every other route
+  file was audited for the same pattern; this was the only instance.
+- **Positional weight/yield fields on the sale form.** The form rendered
+  `liveWeightKg`/`carcassYieldPct` as parallel arrays across every listed
+  animal, but the route only processes the selected subset in unspecified
+  DB order — a real risk of attributing one animal's weight to another.
+  Fields are now keyed by animal id (`liveWeightKg_<id>`), read directly by
+  id server-side, removing the ordering dependency. Found in review, not by
+  a failing test.
+- **Variable shadowing in `reminders.js`.** A handler declared
+  `const next = nextOccurrence(...)` while Express's own `next` callback was
+  still in scope, which would throw on any earlier `next(err)` call in the
+  same function. Renamed to `nextDueDate`. Found in review.
+- **A timezone bug in the E2E check script (not the app).** The check that
+  verifies a withdrawal-blocked animal is disabled on the sale form used
+  `Date.toISOString()` to build "today"'s date; near midnight in a
+  UTC-negative timezone that reads as tomorrow, and the app correctly
+  rejects a future `appliedDate`, so the dose never got applied and the
+  animal was never blocked. Fixed the script to use local date components,
+  matching `src/lib/dates.js#todayIso`, and made the check pick an overdue
+  event with a real (non-zero) carência instead of trusting whichever
+  `/aplicar` link happened to render first.
+
+---
+
 ## Phase 10 — Vacinas, Tratamentos, protocolos, carência and Movimentações (2026-08-03)
 
 The sanitary modules and the atomic location update. This is the phase where
