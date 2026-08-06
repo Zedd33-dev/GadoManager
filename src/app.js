@@ -25,7 +25,7 @@ import { csrfToken, verifyCsrf } from './middleware/csrf.js';
 import { loadUser, requireLogin } from './middleware/auth.js';
 import { flashMiddleware } from './middleware/flash.js';
 import { parseMultipartBody } from './middleware/upload.js';
-import { resolveTenantScope, requireFarmAccess } from './middleware/tenant.js';
+import { resolveTenantScope } from './middleware/tenant.js';
 import * as format from './lib/format.js';
 import authRoutes from './routes/auth.js';
 // The liveness probe, distinct from the sanitary module in routes/health.js.
@@ -141,11 +141,17 @@ export function createApp() {
   app.use(requireLogin);
 
   // User management is a system-level capability (users:manage, admin-only),
-  // not farm-owned data - mounted before requireFarmAccess so an admin
-  // account with no farm assigned yet could still reach it and fix that.
+  // not farm-owned data.
   app.use('/', userRoutes);
 
-  app.use(requireFarmAccess);
+  // A logged-in account with zero farm grants (freshly self-registered, or
+  // an admin who has not assigned any yet) is let through rather than
+  // blocked with a dedicated error page - every scoped query already
+  // returns "no rows" for an empty farmIds array (inClause's `IN (NULL)`),
+  // so the account simply sees the app with nothing in it: empty lists,
+  // zero-valued KPIs, no farm/lot options to choose from on a create form.
+  // That is real information ("you have no farms yet") delivered through
+  // the same screens everyone else uses, rather than a wall in front of them.
   app.use('/', homeRoutes);
   app.use('/', animalRoutes);
   app.use('/', weighingRoutes);

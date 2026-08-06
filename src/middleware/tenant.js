@@ -52,21 +52,6 @@ export function resolveTenantScope(req, res, next) {
 }
 
 /**
- * Guards routes that are meaningless without at least one farm.
- *
- * A user who exists but has been granted no farms would otherwise see empty
- * screens with no explanation.
- */
-export function requireFarmAccess(req, res, next) {
-  if (!req.scope || req.scope.farmIds.length === 0) {
-    return next(
-      new HttpError(403, 'Sua conta ainda não está vinculada a nenhuma fazenda. Fale com o administrador.'),
-    );
-  }
-  return next();
-}
-
-/**
  * Builds a SQL placeholder list and the matching parameter array for an IN clause.
  *
  * Bound parameters cannot express a variable-length list directly, so the
