@@ -8,6 +8,21 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Change — a farm-less account browses instead of being blocked (2026-08-05)
+
+Requested after the registration flow shipped: a freshly self-registered
+account used to hit a dedicated 403 wall on every page (`requireFarmAccess`)
+until an admin granted a farm. That gate is now removed - every scoped query
+already returns "no rows" for an empty farm list, so the account instead
+sees the real app with nothing in it (empty lists, zero KPIs, no farm/lot
+choices on a create form), the same screens everyone else uses. Role-based
+restrictions are untouched: a peao still cannot open Vendas/Custos, farm
+access or not. Verified end-to-end across every module with a fresh
+zero-farm account - nothing crashes, every list shows a sensible empty
+state.
+
+---
+
 ## Fix — theme toggle left chart text in the wrong colour (2026-08-05)
 
 The previous fix (reading chart colours from CSS custom properties instead
