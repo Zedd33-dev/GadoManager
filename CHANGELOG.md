@@ -8,6 +8,69 @@ records what was built, why, and what it closes from the issue register.
 
 ---
 
+## Phase 12 — Hardening: authorization, tenancy and query cost (2026-08-05)
+
+The phase that checks the claims the earlier phases made. Its output is
+mostly **evidence**, not features: every security property this project
+asserts was, until now, verified by someone grepping for it once.
+
+### Added
+
+- **`tests/integration/routeGuards.test.js`** — walks Express's own router
+  stack and asserts every registered route either carries a
+  `requireCapability` guard or appears on an explicit public allow-list, with
+  a stated reason per entry. Also catches two quieter failures: a route
+  naming a capability that does not exist (fails closed, so the screen is
+  sealed shut for *everyone* including admins, silently), and a `POST` gated
+  behind a `:read` capability (which every peão holds). `requireCapability`
+  now tags its guard with the capability name to make the stack
+  introspectable.
+- **`tests/integration/crossTenantAccess.test.js`** — drives real HTTP with
+  real sessions against a temporary database to prove no user can reach
+  another farm's records by putting an id in the URL (IDOR). Repository-level
+  isolation tests would still pass if a *route* forgot to pass `req.scope`;
+  only driving the route catches that. Both fixture users are `admin` on
+  purpose, so any refusal can only be the farm boundary rather than a missing
+  capability — the strongest form of the claim.
+
+### Verified
+
+- **Both suites were confirmed able to fail.** An unguarded route, a
+  mistyped capability, a read-gated `POST`, a scope dropped from
+  `findWithDetailsInScope`, and a scope dropped from the bulk `DELETE` were
+  each injected in turn; each was caught by the expected assertion, and each
+  injection was reverted. A test that has never failed proves nothing.
+- **No N+1 anywhere.** Every `better-sqlite3` statement *execution* was
+  counted per request (executions, not `prepare()` calls — a statement
+  prepared once and run in a loop is exactly the shape being hunted). Query
+  counts are flat with respect to result size: `/animais` issues 10
+  statements at both 25 and 100 rows per page. An N+1 would scale with the
+  row count; these do not.
+
+### Fixed
+
+- **The dashboard re-read the lots table 4× per request** (24 statements
+  total): three lot-keyed charts each rebuilt the same id→name map, plus the
+  filter bar. Built once and shared now — **24 → 22 statements**, and across
+  every page measured no statement runs more than twice in one request.
+- **The session store's sweep timer kept the Node process alive forever.**
+  `better-sqlite3-session-store` starts it with a bare `setInterval`, never
+  unref'd and with no handle kept. Invisible in a running server, but any
+  process that just builds the app and finishes hangs — the new test suite
+  took 2 minutes for 0.7s of work. Now unref'd, which is also correct in
+  production: a background janitor should never hold a process open.
+
+### Not changed, and why
+
+Server-side validation was audited route by route and needed no work: every
+mutating route already delegates to a `validate*Input` function before
+touching the database, and the destructive bulk paths (`/animais/excluir`,
+`/pesagens/:id/excluir`) already bind the farm scope into the `DELETE` itself
+rather than filtering afterwards. Both are now locked in by the tests above
+instead of resting on inspection.
+
+---
+
 ## Change — a farm-less account browses instead of being blocked (2026-08-05)
 
 Requested after the registration flow shipped: a freshly self-registered
