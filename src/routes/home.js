@@ -15,6 +15,7 @@ import {
   weightEvolutionChart,
   gmdCurveChart,
   costsByCategoryChart,
+  buildLotNameMap,
 } from '../services/chartDataService.js';
 import { todayIso, addDays } from '../lib/dates.js';
 import { toEmbeddableJson } from '../lib/safeJson.js';
@@ -57,7 +58,15 @@ router.get('/', requireCapability('dashboard:read'), (req, res) => {
   };
 
   const scopeArgs = req.scope.effectiveFarmIds;
-  const lotOption = { lotId: filters.lotId };
+
+  // Three of the charts below label their series by lote. Built once here and
+  // shared, rather than each chart re-reading the same handful of rows: the
+  // lots table cannot change between two calls within one request, so the
+  // repeat reads were pure waste (3 of the dashboard's 24 statements).
+  const lotOption = {
+    lotId: filters.lotId,
+    lotNames: buildLotNameMap(db, scopeArgs),
+  };
 
   const charts = {
     herdStatus: herdStatusChart(kpis.herd),

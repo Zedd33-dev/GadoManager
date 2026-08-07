@@ -34,8 +34,16 @@ const NO_LOT_LABEL = 'Sem lote';
 /**
  * Builds a lot-id -> name lookup, including a `null` entry for animals with no
  * lote assigned.
+ *
+ * Exported so a caller that renders several lot-keyed charts in one request
+ * (the dashboard renders three) can build it once and hand the same map to
+ * each, instead of every chart independently re-reading a table that cannot
+ * have changed between two calls in the same request. Measured on the seeded
+ * demo data, that repetition accounted for 3 of the dashboard's 24 SQL
+ * statements - a small constant-factor win, not an N+1 (see Phase 12 in
+ * CHANGELOG.md for the measurement).
  */
-function buildLotNameMap(db, farmIds) {
+export function buildLotNameMap(db, farmIds) {
   const map = new Map([[null, NO_LOT_LABEL]]);
   for (const lot of listLotsInScope(db, farmIds)) map.set(lot.id, lot.name);
   return map;
@@ -88,9 +96,11 @@ export function herdStatusChart(herd) {
 /**
  * "Peso médio por lote" bar chart, with the herd average as a reference line.
  */
-export function weightByLotChart(db, farmIds, { lotId = null } = {}) {
+export function weightByLotChart(db, farmIds, { lotId = null, lotNames: providedNames } = {}) {
   const rows = weightByLot(db, farmIds, { lotId });
-  const lotNames = buildLotNameMap(db, farmIds);
+  // Optional: falls back to building its own, so every existing caller and
+  // test keeps working untouched.
+  const lotNames = providedNames ?? buildLotNameMap(db, farmIds);
 
   const sorted = [...rows].sort((a, b) => b.averageKg - a.averageKg);
 
@@ -189,10 +199,10 @@ function seriesByLot(rows, valueKey, monthKeys, lotNames) {
  * Deliberately not restricted to active animals - see the repository function
  * for why a historical trend must include animals later sold or that died.
  */
-export function weightEvolutionChart(db, farmIds, today, { lotId = null } = {}) {
+export function weightEvolutionChart(db, farmIds, today, { lotId = null, lotNames: providedNames } = {}) {
   const monthKeys = trailingMonthKeys(today);
   const sinceMonth = `${monthKeys[0]}-01`;
-  const lotNames = buildLotNameMap(db, farmIds);
+  const lotNames = providedNames ?? buildLotNameMap(db, farmIds);
 
   const rows = monthlyWeightByLot(db, farmIds, sinceMonth, { lotId });
   const series = seriesByLot(rows, 'averageKg', monthKeys, lotNames);
@@ -215,10 +225,10 @@ export function weightEvolutionChart(db, farmIds, today, { lotId = null } = {}) 
 /**
  * "Curva de GMD" - one line per lote, over the trailing window.
  */
-export function gmdCurveChart(db, farmIds, today, { lotId = null } = {}) {
+export function gmdCurveChart(db, farmIds, today, { lotId = null, lotNames: providedNames } = {}) {
   const monthKeys = trailingMonthKeys(today);
   const sinceMonth = `${monthKeys[0]}-01`;
-  const lotNames = buildLotNameMap(db, farmIds);
+  const lotNames = providedNames ?? buildLotNameMap(db, farmIds);
 
   const rows = monthlyGmdByLot(db, farmIds, sinceMonth, { lotId });
   const series = seriesByLot(rows, 'averageGmd', monthKeys, lotNames);
