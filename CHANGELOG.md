@@ -6,6 +6,71 @@ All notable changes to GadoManager, organised by the execution phases defined in
 This file doubles as evidence of methodology for the written thesis: each phase
 records what was built, why, and what it closes from the issue register.
 
+Newest first below. For the numbered phases in order, see
+[`docs/00-baseline-design.md`](docs/00-baseline-design.md) §5 for the plan
+they follow.
+
+## Índice
+
+- [Phase 13 — TCC deliverables](#phase-13--tcc-deliverables-documentation-2026-08-05)
+- [Phase 12 — Hardening](#phase-12--hardening-authorization-tenancy-and-query-cost-2026-08-05)
+- [Change — a farm-less account browses instead of being blocked](#change--a-farm-less-account-browses-instead-of-being-blocked-2026-08-05)
+- [Fix — theme toggle left chart text in the wrong colour](#fix--theme-toggle-left-chart-text-in-the-wrong-colour-2026-08-05)
+- [Fix — chart text stuck black in dark mode](#fix--chart-text-stuck-black-in-dark-mode-2026-08-05)
+- [Visual polish pass](#visual-polish-pass-2026-08-05)
+- [Self-registration and admin user management](#self-registration-and-admin-user-management-2026-08-05)
+- [Fixes — free-text breed, header overflow](#fixes--free-text-breed-header-overflow-2026-08-05)
+- [UI additions — dark mode, printable report, thumbnails, global search](#ui-additions--dark-mode-printable-report-thumbnails-global-search-2026-08-05)
+- [Phase 11 — Vendas, Custos and Lembretes](#phase-11--vendas-custos-and-lembretes-2026-08-04)
+- [Phase 10 — Vacinas, Tratamentos, protocolos, carência and Movimentações](#phase-10--vacinas-tratamentos-protocolos-carência-and-movimentações-2026-08-03)
+- [Phase 9 — Pesagens, Lotes, Pastos and Fazendas](#phase-9--pesagens-lotes-pastos-and-fazendas-2026-08-03)
+- [Phase 8 — Animais module and reusable list infrastructure](#phase-8--animais-module-and-reusable-list-infrastructure-2026-08-03)
+- [Phase 7 — Design system, mobile navigation and accessibility](#phase-7--design-system-mobile-navigation-and-accessibility-2026-08-03)
+- [Phase 6 — Dashboard charts](#phase-6--dashboard-charts-2026-08-03)
+- [Phase 5 — Dashboard v1](#phase-5--dashboard-v1-2026-08-03)
+- [Phase 4 — KPI services](#phase-4--kpi-services-2026-08-03)
+- [Phase 3 — Demo dataset](#phase-3--demo-dataset-2026-08-03)
+- [Phase 2 — Authentication, roles and tenant isolation](#phase-2--authentication-roles-and-tenant-isolation-2026-08-03)
+- [Phase 1 — Database schema](#phase-1--database-schema-2026-08-03)
+- [Phase 0 — Foundation](#phase-0--foundation-2026-08-03)
+
+---
+
+## Phase 13 — TCC deliverables (documentation) (2026-08-05)
+
+The write-up phase: everything needed for the thesis to stand on its own
+without a live walkthrough.
+
+### Added
+
+- **`README.md`** — install/run/test instructions, demo credentials, and an
+  upfront pointer to what is provisional (the sanitary calendar and the two
+  farms' UF) so it cannot be mistaken for validated domain data.
+- **`docs/architecture.md`** — layers, the request lifecycle, multi-tenancy,
+  capability-based authorization, security posture, dark mode's one real
+  gotcha (Chart.js bakes colour into the canvas at draw time), and a section
+  of decisions specifically framed as "worth a defense question."
+- **`docs/data-model.md`** — full data dictionary and ER diagram, generated
+  by reading the schema directly out of the live database (`sqlite_master`)
+  rather than copied from the Phase 0 plan, which had already drifted (that
+  plan still shows `breed` as a three-value enum; migration 005 changed it
+  to free text three phases ago). The Mermaid diagram was rendered with
+  `@mermaid-js/mermaid-cli` before committing, not just visually inspected as
+  markdown, to confirm the syntax is actually valid.
+- **`docs/requirements.md`** — actors, functional/non-functional
+  requirements, and the full capability matrix, cross-referenced to
+  `src/domain/permissions.js` so it cannot silently drift from what
+  `routeGuards.test.js` already enforces in code.
+- A table of contents at the top of this file, since it had grown past 1200
+  lines across thirteen phases plus the ad-hoc work between Phase 11 and 12.
+
+### Fixed
+
+- A one-line comment in `scripts/create-user.js` still claimed "the
+  application deliberately has no public sign-up" - true when it was
+  written, false since `/registrar` shipped between Phase 11 and 12. Caught
+  while writing the docs that would have repeated the same stale claim.
+
 ---
 
 ## Phase 12 — Hardening: authorization, tenancy and query cost (2026-08-05)
