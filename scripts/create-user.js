@@ -2,8 +2,10 @@
  * Creates a user from the command line.
  *
  * Exists so that a fresh installation can be logged into before the demo seed
- * runs, and so an administrator can be added without a registration page - the
- * application deliberately has no public sign-up.
+ * runs, and so an admin account can be created directly with `--role admin`
+ * and (optionally) an initial farm - the public registration form at
+ * /registrar always creates a farm-less `peao`, on purpose, and can never be
+ * used to self-grant admin.
  *
  * Usage:
  *   node scripts/create-user.js --name "Ana Souza" --email ana@fazenda.com \
