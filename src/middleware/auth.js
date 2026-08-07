@@ -67,7 +67,7 @@ export function requireLogin(req, res, next) {
  * @param {string} capability a key from `domain/permissions.js`
  */
 export function requireCapability(capability) {
-  return function capabilityGuard(req, res, next) {
+  function capabilityGuard(req, res, next) {
     if (!req.user) return next(new HttpError(401, 'É necessário entrar para continuar.'));
 
     if (!can(req.user.role, capability)) {
@@ -75,5 +75,14 @@ export function requireCapability(capability) {
     }
 
     return next();
-  };
+  }
+
+  // Tagged so the guard is discoverable by walking Express's router stack.
+  // `tests/integration/routeGuards.test.js` enumerates every registered route
+  // and fails if one carries no guard, which turns "every route is protected"
+  // from a claim that was true when someone last grepped for it into an
+  // assertion that breaks the build the moment a new unguarded route appears.
+  capabilityGuard.capability = capability;
+
+  return capabilityGuard;
 }
