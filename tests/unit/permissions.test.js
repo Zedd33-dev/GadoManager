@@ -36,14 +36,19 @@ test('peao may not manage the herd, money or the sanitary calendar', () => {
   assert.equal(can(FIELD_HAND, 'users:manage'), false);
 });
 
-test('gerente runs operations but not administration', () => {
+test('gerente runs operations, including creating a farm, but not administration', () => {
   assert.ok(can(MANAGER, 'animals:write'));
   assert.ok(can(MANAGER, 'health:schedule'));
   assert.ok(can(MANAGER, 'sales:write'));
   assert.ok(can(MANAGER, 'costs:write'));
   assert.ok(can(MANAGER, 'movements:write'));
 
-  assert.equal(can(MANAGER, 'farms:write'), false);
+  // A self-registered account is granted this role specifically so it can
+  // create its own farm rather than waiting on an admin - see routes/auth.js.
+  assert.ok(can(MANAGER, 'farms:write'));
+
+  // What stays admin-only: permanent deletion, and user management, which
+  // reaches every account in the system, not just the caller's own farms.
   assert.equal(can(MANAGER, 'users:manage'), false);
   assert.equal(can(MANAGER, 'animals:delete'), false);
 });

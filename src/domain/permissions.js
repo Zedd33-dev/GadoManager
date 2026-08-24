@@ -64,9 +64,18 @@ export const CAPABILITIES = Object.freeze({
   'costs:read': [ADMIN, MANAGER],
   'costs:write': [ADMIN, MANAGER],
 
-  // Destructive and structural operations.
+  // Structural: creating the fazenda a gerente will run. A self-registered
+  // account is granted the gerente role with zero farms (see routes/auth.js)
+  // specifically so it can create its own farm here rather than waiting on
+  // an admin - creating a farm grants its creator access to it in the same
+  // transaction (farmRepository.insertFarmForUser), which is what actually
+  // bootstraps a brand new account into having anything to manage.
+  'farms:write': [ADMIN, MANAGER],
+
+  // Destructive and system-wide operations. Deleting an animal is permanent;
+  // managing users reaches every account in the system, not just the
+  // caller's own farms - both stay admin-only.
   'animals:delete': [ADMIN],
-  'farms:write': [ADMIN],
   'users:manage': [ADMIN],
 });
 

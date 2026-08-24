@@ -12,6 +12,7 @@ they follow.
 
 ## Índice
 
+- [Change — a self-registered account can run its own operation](#change--a-self-registered-account-can-run-its-own-operation-2026-08-24)
 - [Fix — error page crashed for an anonymous visitor](#fix--error-page-crashed-for-an-anonymous-visitor-2026-08-24)
 - [Phase 13 — TCC deliverables](#phase-13--tcc-deliverables-documentation-2026-08-05)
 - [Phase 12 — Hardening](#phase-12--hardening-authorization-tenancy-and-query-cost-2026-08-05)
@@ -34,6 +35,45 @@ they follow.
 - [Phase 2 — Authentication, roles and tenant isolation](#phase-2--authentication-roles-and-tenant-isolation-2026-08-03)
 - [Phase 1 — Database schema](#phase-1--database-schema-2026-08-03)
 - [Phase 0 — Foundation](#phase-0--foundation-2026-08-03)
+
+---
+
+## Change — a self-registered account can run its own operation (2026-08-24)
+
+Requested directly: a fresh account from `/registrar` should be able to
+create farms, lots and manage costs, not sit idle waiting on an admin.
+
+### Changed
+
+- `farms:write` now includes `gerente`, not just `admin`
+  (`src/domain/permissions.js`). Self-registration
+  (`src/routes/auth.js`) grants the new `gerente` role instead of `peao`.
+  A new account still starts with zero farms - what changes is that
+  creating one is now the account's *own* first move: `farms:write`
+  reaches the form, and creating a farm grants its creator access to it in
+  the same transaction (`farmRepository.insertFarmForUser`), which is what
+  actually gives a fresh account something to manage. Lotes, pastos,
+  animais, vendas and custos were already `gerente`-level capabilities and
+  needed no change.
+- What stays `admin`-only, deliberately: `users:manage` (reaches every
+  account in the system, not just the caller's own farms) and
+  `animals:delete` (permanent). A self-registered account cannot grant
+  itself either by registering.
+- Updated the registration page's copy and the post-registration flash
+  message accordingly - "peça a um administrador" was no longer true, so
+  it was replaced rather than left stale.
+
+### Added
+
+- `tests/integration/selfServiceRegistration.test.js` — drives the actual
+  path end to end: register, log in, create a farm, then create a lot and
+  a cost inside it, all as the same brand-new account with no admin
+  involved. Also confirms the boundary that didn't move: that account still
+  gets 403 on `/usuarios` and on bulk-deleting animals.
+- Updated `tests/unit/permissions.test.js` for the new `farms:write` shape,
+  and `docs/requirements.md`, `docs/architecture.md` and `README.md` for
+  the new registration story - all three previously described the old
+  "wait for an admin" flow as current behaviour.
 
 ---
 

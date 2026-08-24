@@ -93,8 +93,13 @@ Uma lista vazia (usuário sem nenhuma fazenda concedida) compila para
 degenerado mais seguro possível, sem precisar de um `if` especial em cada
 consulta. Uma conta recém-criada (auto-registro) nasce exatamente nesse
 estado: navega o site normalmente, mas todas as listas aparecem vazias e
-todo indicador aparece zerado, até um administrador conceder acesso a uma
-fazenda pela tela `/usuarios`.
+todo indicador aparece zerado — até ela mesma cadastrar uma fazenda. O
+cargo `gerente` concedido no registro já inclui `farms:write`
+especificamente por isso: criar uma fazenda concede acesso a ela ao próprio
+criador na mesma transação (`farmRepository.insertFarmForUser`), então uma
+conta nova não precisa esperar por um administrador para ter o que gerir —
+só não alcança o que é do sistema inteiro (`users:manage`) ou irreversível
+(`animals:delete`), que continuam exclusivos de `admin`.
 
 Isso é verificado automaticamente, não apenas assumido:
 

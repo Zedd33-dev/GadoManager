@@ -70,9 +70,11 @@ node scripts/create-user.js --name "Seu Nome" --email voce@exemplo.com \
                              --role admin --password "uma-senha-forte"
 ```
 
-Qualquer outra pessoa pode criar a própria conta em `/registrar`, mas ela
-nasce sem nenhuma fazenda vinculada — um administrador precisa concedê-la
-depois, pela tela `/usuarios`.
+Qualquer outra pessoa pode criar a própria conta em `/registrar` — ela nasce
+como `gerente` sem nenhuma fazenda vinculada, e cadastra a própria fazenda
+logo depois de entrar. Só o que alcança o sistema inteiro (gerenciar
+usuários) ou é irreversível (excluir animal) continua exclusivo de um
+administrador.
 
 ## Testes
 

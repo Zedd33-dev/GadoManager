@@ -28,8 +28,12 @@ Cada linha aponta o módulo que a implementa, para rastreabilidade.
 
 ### RF01 — Autenticação e contas
 - RF01.1 Um visitante pode criar uma conta (`/registrar`), que nasce como
-  `peao` sem nenhuma fazenda vinculada — inofensiva até que um
-  administrador conceda acesso.
+  `gerente` sem nenhuma fazenda vinculada. Sem fazenda ainda não é sem
+  função: a própria conta cadastra sua fazenda (`farms:write` inclui
+  gerente) e, a partir daí, opera sozinha — lotes, pastos, animais, vendas,
+  custos — sem depender de um administrador. Continua impossível se
+  autoconceder `admin` (gestão de usuários, exclusão permanente) pelo
+  cadastro.
 - RF01.2 Login por e-mail/senha, com Argon2id e sem distinguir "e-mail não
   existe" de "senha errada" na mensagem de erro.
 - RF01.3 Uma conta desativada perde a sessão já aberta na requisição
@@ -160,14 +164,22 @@ automaticamente por `tests/integration/routeGuards.test.js`.
 | Criar/editar lembrete | ✅ | ✅ | ❌ |
 | Ver e lançar vendas | ✅ | ✅ | ❌ |
 | Ver e lançar custos | ✅ | ✅ | ❌ |
+| Cadastrar/editar fazenda | ✅ | ✅ | ❌ |
 | Excluir animal (permanente) | ✅ | ❌ | ❌ |
-| Cadastrar/editar fazenda | ✅ | ❌ | ❌ |
 | Gerenciar usuários (cargo, acesso a fazenda, ativar/desativar) | ✅ | ❌ | ❌ |
 
 A lógica por trás da coluna do peão: ele registra o que acontece no campo,
 mas não decide política — não cadastra um animal, não lança uma venda, não
 muda o calendário sanitário. Vendas e custos são dado financeiro/comercial,
 fora do escopo de quem trabalha a campo.
+
+A lógica por trás do gerente ter "Cadastrar/editar fazenda": é o cargo dado
+a uma conta recém-criada por autocadastro (RF01.1), especificamente para
+que ela consiga montar sua própria operação sem depender de um
+administrador já existente. O que continua exclusivo do admin é o que
+alcança o sistema inteiro (gerenciar qualquer usuário) ou é irreversível
+(excluir um animal permanentemente) — nunca a estrutura da própria fazenda
+de quem acabou de se cadastrar.
 
 ## 6. Fora de escopo (decisão deliberada)
 

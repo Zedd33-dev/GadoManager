@@ -115,22 +115,28 @@ router.post('/registrar', async (req, res, next) => {
 
     const passwordHash = await hashPassword(result.data.password);
 
-    // New accounts start as `peao` with no farm access - harmless until an
-    // administrator assigns a role and one or more farms from /usuarios
-    // (issue SEC-06: a user with no rows in user_farms can address no farm
-    // data at all, regardless of role). Nobody can grant themselves admin or
-    // farm access simply by registering.
+    // New accounts start as `gerente` with zero farms - not `peao`, because
+    // a self-registered account is meant to run its own operation
+    // (cadastrar a fazenda, lotes, custos, vendas), not wait on an admin to
+    // hand it access to someone else's. Zero farms is still the safe
+    // starting point (issue SEC-06: a user with no rows in user_farms can
+    // address no farm data at all, regardless of role) - what changes here
+    // is that `farms:write` now includes gerente, so the very first thing
+    // this account can do is create its own farm, which grants the creator
+    // access to it in the same transaction. Nobody can grant themselves
+    // `admin` (user management, permanent deletion) by registering; that
+    // still requires an existing admin.
     insertUser(db, {
       name: result.data.name,
       email: result.data.email,
       passwordHash,
-      role: ROLES.FIELD_HAND,
+      role: ROLES.MANAGER,
     });
 
     setFlash(
       req,
       'success',
-      'Conta criada. Peça a um administrador para liberar o acesso a uma fazenda.',
+      'Conta criada. Cadastre sua fazenda para começar.',
     );
     return res.redirect('/login');
   } catch (error) {
