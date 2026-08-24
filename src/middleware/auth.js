@@ -20,6 +20,13 @@ import { HttpError } from './errors.js';
  * effect immediately instead of at the user's next login.
  */
 export function loadUser(req, res, next) {
+  // Set even for an anonymous request, so every view - notably
+  // errors/error.ejs, the one template reachable both logged in and out -
+  // can reference `currentUser` without EJS throwing "not defined" on a
+  // request that never reaches the branch below (issue: a 404 for an
+  // unauthenticated visitor crashed the error page itself in production).
+  res.locals.currentUser = null;
+
   const userId = req.session?.userId;
   if (!userId) return next();
 
