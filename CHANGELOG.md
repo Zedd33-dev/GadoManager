@@ -12,6 +12,7 @@ they follow.
 
 ## Índice
 
+- [Fix — error page crashed for an anonymous visitor](#fix--error-page-crashed-for-an-anonymous-visitor-2026-08-24)
 - [Phase 13 — TCC deliverables](#phase-13--tcc-deliverables-documentation-2026-08-05)
 - [Phase 12 — Hardening](#phase-12--hardening-authorization-tenancy-and-query-cost-2026-08-05)
 - [Change — a farm-less account browses instead of being blocked](#change--a-farm-less-account-browses-instead-of-being-blocked-2026-08-05)
@@ -33,6 +34,33 @@ they follow.
 - [Phase 2 — Authentication, roles and tenant isolation](#phase-2--authentication-roles-and-tenant-isolation-2026-08-03)
 - [Phase 1 — Database schema](#phase-1--database-schema-2026-08-03)
 - [Phase 0 — Foundation](#phase-0--foundation-2026-08-03)
+
+---
+
+## Fix — error page crashed for an anonymous visitor (2026-08-24)
+
+Found on the first real deploy (Render, free tier) — the class demo's
+login page returned a bare, unstyled "Not Found" the moment anyone hit it.
+
+`errors/error.ejs` references `currentUser` to decide whether to show the
+logout button added earlier (a user stuck on a 403 needs a way out).
+`res.locals.currentUser` was only ever set on `loadUser`'s authenticated
+branch, though. `requireLogin` redirects an anonymous *GET* request that
+accepts *html* straight to `/login`, so that common case never reaches
+`errorHandler` unauthenticated - but a non-GET or non-HTML request to a
+protected route (a health probe, a bot, an API client with no `Accept:
+text/html`) gets answered with a plain 401 instead of a redirect, and that
+request is still anonymous. Rendering the error page for it threw
+`ReferenceError: currentUser is not defined` - EJS does not treat a name
+absent from `res.locals` as `undefined`, it throws - which crashed the
+*error page itself*, the one template reachable both logged in and out.
+
+`loadUser` now sets `res.locals.currentUser = null` unconditionally before
+its early return, so every render has a defined value regardless of which
+branch runs. Added `tests/integration/errorPage.test.js` and verified it
+the same way every Phase 12 security test was verified: reverted the fix,
+confirmed the test failed with the exact production stack trace, restored
+it.
 
 ---
 
